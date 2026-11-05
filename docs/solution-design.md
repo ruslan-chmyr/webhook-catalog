@@ -1,16 +1,16 @@
 # Frame50 — Solution Design
 
-> **Scope:** documentation of the existing `main` implementation (commit `5fcff1d195b817ef49bcfdb0a6610573c1766064`, reviewed November 5, 2026). This is an architecture walkthrough, **not** a proposal to refactor the codebase.
+> **Scope:** architecture walkthrough of the current `main` codebase, reviewed November 5, 2026. This documents existing behavior; it is not a refactoring proposal. The main design case is **authentication and asynchronous request correctness**.
 >
 > [← Back to README](../README.md)
 
 ## 1. Context and constraints
 
-Frame50 is a small React movie catalog with sign-in, title search, URL-based pagination, detail editing, rating-sorted results, and locally mocked HTTP endpoints. Its primary technical challenge is not the movie data: it is coordinating asynchronous requests, route state, authentication, and private server state with predictable outcomes.
+Frame50 is a small React movie catalog with sign-in, a table/grid toggle, search, nine-item URL-driven pagination, detail editing, rating-sorted results and CDN-hosted movie posters. **Its main technical challenge is authentication correctness under concurrency:** multiple expired requests, in-flight refreshes, logout/re-login races and stale private-cache writes. The other design decisions—URL state, shared data fetching and image loading—show how that cross-cutting infrastructure supports a simple product.
 
-**Constraints in this implementation:** a React SPA; mock API via browser MSW during development and MSW Node handlers in tests; no separate API server, database, or persistent catalog; the original `/v1/webhooks` contract and internal names are retained. React 19, strict TypeScript, Vite, React Router, TanStack Query, and Chakra UI v3 comprise the application stack.
+**Constraints in this implementation:** a React SPA; mock API via browser MSW during development and MSW Node handlers in tests; static TMDB poster paths with direct browser requests to TMDB's image CDN; no separate API server, database, or persistent catalog; the original `/v1/webhooks` contract and internal names are retained. React 19, strict TypeScript, Vite, React Router, TanStack Query and Chakra UI v3 comprise the application stack.
 
-**Non-goals:** production authentication, real IMDb integrations, external APIs, creating/deleting records, status editing, and broad architectural rewrites.
+**Non-goals:** production authentication, runtime movie-metadata APIs, scraping IMDb, durable edits, creating/deleting records, status editing and broad architectural rewrites. The **TMDB Image CDN is an external image resource**, not a catalog backend or runtime movie API.
 
 ## 2. Architecture and boundaries
 
@@ -24,8 +24,9 @@ flowchart TB
   subgraph UI[Page composition]
     Login[LoginPage / useLoginForm]
     Catalog[WebhooksPage / useWebhooksPage]
-    List[Search, Table, Pagination, States]
+    List[Search, Table, Grid, Pagination, States]
     Editor[Edit Dialog / useWebhookEditDialog]
+    Poster[MovieCard / MoviePoster]
   end
   subgraph Features[Feature modules]
     Auth[features/auth]
@@ -48,6 +49,7 @@ flowchart TB
   Login --> Auth
   Catalog --> List
   Catalog --> Editor
+  Catalog --> Poster
   Catalog --> Movies
   Editor --> Movies
   Movies --> HTTP
@@ -57,6 +59,7 @@ flowchart TB
   HTTP --> Session
   HTTP --> Worker
   Worker --> Handlers
+  Poster --> CDN[TMDB image CDN]
 ```
 
 `src/app/composition.ts` creates the shared `http`, `protectedClient`, `session`, and `queryClient` instances and publishes authentication change notifications. `src/app/router.tsx` composes a protected index route and the login route. Feature hooks use TanStack Query and API functions; the pages compose rendering components and interaction orchestration.
@@ -69,15 +72,15 @@ The module structure is **feature-oriented with colocation**, not strict Feature
 | --- | --- | --- |
 | `src/app/` | Runtime wiring, providers, routes, page composition | `composition.ts`, `router.tsx` |
 | `src/app/pages/login/` | Login UI and form-local behavior | `LoginPage.tsx`, `useLoginForm.ts` |
-| `src/app/pages/webhooks/list/` | Catalog presentation and route-aware UI orchestration | `WebhooksPage.tsx`, `useWebhookListState.ts` |
+| `src/app/pages/webhooks/list/` | Catalog presentation and route-aware UI orchestration, view switch, poster states | `WebhooksPage.tsx`, `MovieGrid.tsx`, `MoviePoster.tsx`, `useCatalogViewMode.ts` |
 | `src/app/pages/webhooks/edit/` | Edit dialog and form validation | `useWebhookEditDialog.ts`, `webhookForm.ts` |
 | `src/features/auth/` | Authentication API and user/session models | `authApi.ts`, `currentUser.ts` |
-| `src/features/webhooks/` | Catalog API contracts, query keys and data hooks | `webhooksApi.ts`, `useUpdateWebhook.ts` |
+| `src/features/webhooks/` | Catalog API contracts, query keys, data hooks and poster URLs | `webhooksApi.ts`, `useUpdateWebhook.ts`, `posterUrl.ts` |
 | `src/shared/api/` | HTTP concerns independent of catalog UI | `httpClient.ts`, `protectedClient.ts`, `csrf.ts` |
 | `src/shared/session/` | Session state and rotation coordination | `sessionManager.ts` |
 | `src/mocks/` | In-memory API simulator and deterministic fixtures | `handlers.ts`, `webhooks.ts`, `authState.ts` |
 
-**Why colocate?** A catalog-specific state machine and its table components live near the catalog page; shared infrastructure is reserved for genuinely cross-cutting concerns. This shortens navigation paths during maintenance while keeping feature APIs independently understandable.
+**Why colocate?** Catalog-specific hooks, table, grid, poster and edit components live near the catalog page; shared infrastructure is reserved for genuinely cross-cutting concerns. This shortens navigation paths during maintenance while keeping feature APIs independently understandable.
 
 **Trade-off:** a few names still refer to `webhooks`, including types, paths, and files. They accurately describe the preserved technical contract but do not mirror the new product name. Avoid renaming without a functional reason.
 
@@ -86,16 +89,29 @@ The module structure is **feature-oriented with colocation**, not strict Feature
 | ID | Problem / risk | Current decision | Trade-off |
 | --- | --- | --- | --- |
 | D1 | Navigation and search can disagree | URL is canonical for page and committed search; separate debounced input | More synchronization logic in one hook |
-| D2 | Concurrent `401` responses can duplicate refreshes | Shared rotation promise and generation / epoch guards | Extra session bookkeeping |
-| D3 | CSRF token expiration during mutation | Shared refresh after `419`, at most one CSRF retry per protected call | Client depends on backend error convention |
+| **D2** | **Concurrent `401` responses can duplicate refreshes** | **Shared rotation promise, generation and epoch guards** | Additional session bookkeeping |
+| **D3** | **CSRF token expiration during mutation** | **Shared refresh after `419`, bounded retry budgets** | Depends on backend error convention |
 | D4 | Data shown after an edit can be stale | Detail cache update and list-prefix invalidation | List refetch instead of optimistic list patching |
-| D5 | Private queries may outlive the session | All private keys share prefix, removed on session invalidation | Session-specific query convention must be maintained |
-| D6 | Demo must be testable without remote services | MSW intercepts the same HTTP interface as production-oriented code | Does not validate real server security/integration |
-| D7 | UI components can accumulate business logic | Presentation composed from page hooks and feature hooks | Additional files; small explicit wiring layer |
+| **D5** | **Private queries may outlive a session** | **Private query prefix, cancellation/removal and auth-epoch checks** | Requires a consistent private-query convention |
+| D6 | Demo must work without a remote API | MSW intercepts HTTP calls in development and tests | Does not verify real server security/integration |
+| D7 | UI components can accumulate business logic | Page composition + feature hooks and colocated components | Small explicit wiring layer and more files |
+| D8 | Different catalog views could fork business logic | Shared TanStack Query state, page state, edit dialog, presentation-only table/grid | View-specific rendering remains separate |
+| D9 | Movie posters can cause unnecessary network work and layout shifts | Static TMDB paths, responsive srcSet/sizes, eager/lazy priorities, 2:3 reserved area, blur/error fallback | CDN dependency, static mappings and no measured performance benchmark |
+
+### Authentication correctness: the central case study
+
+The critical behavior is **not the login form itself**. It is what happens when asynchronous requests overlap an expiring session or a logout. This is implemented across four explicit boundaries:
+
+1. **HTTP protocol:** `httpClient` enforces same-origin paths, required headers and typed errors.
+2. **Recovery coordination:** `protectedClient` bounds `401` and `419` retries; `sessionManager` ensures only one rotation promise is active for the current session.
+3. **Session identity:** `authEpoch` invalidates work started under a previous session, while `sessionGeneration` distinguishes completed rotations within the same session.
+4. **Private server state:** `composition.ts` cancels and removes queries under `['private']`; mutations check the epoch before writing to the cache.
+
+**Invariant:** a successful network response is only usable while the session that started it is still current. See [HTTP and recovery](#5-http-csrf-and-session-recovery), [authentication lifecycle](#6-authentication-lifecycle) and [cache consistency](#7-edit-workflow-and-cache-consistency).
 
 ## 4. URL state and catalog flow
 
-The page reads `page` and `search` using `useSearchParams` via `useWebhookListState`. It canonicalizes invalid/duplicate page values, trims search text, omits page one/empty search from the URL, and uses `replace` for normalization. Search input is debounced by **350 ms**, and committing new search text resets page to one. Browser Back/Forward restores route-derived state. Out-of-range pages are replaced with the last available page after the API returns pagination metadata.
+The page reads `page` and `search` using `useSearchParams` via `useWebhookListState`. **Both table and grid use the same page of nine records**. It canonicalizes invalid/duplicate page values, trims search text, omits page one/empty search from the URL, and uses `replace` for normalization. Search input is debounced by **350 ms**, and committing new search text resets page to one. Browser Back/Forward restores route-derived state. Out-of-range pages are replaced with the last available page after the API returns pagination metadata.
 
 ```mermaid
 sequenceDiagram
@@ -112,16 +128,16 @@ sequenceDiagram
   Note over State: 350 ms debounce + normalization
   State->>Router: Replace URL search and reset page to 1
   Router-->>State: parsed page and search
-  State->>Query: queryKey(page, limit=10, search)
+  State->>Query: queryKey(page, limit=9, search)
   Query->>API: queryFn(signal)
-  API->>MSW: GET /v1/webhooks?page=1&limit=10&search=...
+  API->>MSW: GET /v1/webhooks?page=1&limit=9&search=...
   Note over MSW: Filter by name, sort by rating descending, then paginate
   MSW-->>API: data + paging metadata
   API-->>Query: validated response
-  Query-->>User: Render table / empty / error / pagination
+  Query-->>User: Render selected view, empty/error and pagination
 ```
 
-Query keys include `page`, `limit`, and `search` under `['private', 'webhooks']`; therefore distinct URLs map to distinct cache entries. Search and pagination happen in the MSW handler, **not** as a client-side filter after fetching one page. The mock currently holds exactly 50 curated movies and sorts matches by descending static rating.
+Query keys include `page`, `limit`, and `search` under `['private', 'webhooks']`; therefore distinct URLs map to distinct cache entries. Search and pagination happen in the MSW handler, **not** as a client-side filter after fetching one page. The mock currently holds exactly 50 curated movies, sorts matches by descending static rating and paginates the results with a **client-requested limit of nine**.
 
 **Important nuance:** The route and the network request each have a separate concern. The URL provides navigation state; TanStack Query owns remote-like results, loading and refetch state; MSW supplies the current dataset. Keeping these apart makes the behavior observable and testable.
 
@@ -135,8 +151,11 @@ flowchart TD
   Fetch[useGetWebhooks]
   Search[WebhookSearch]
   States[WebhookListSkeleton / Error / Empty]
+  Switch[CatalogViewSwitcher / useCatalogViewMode]
   Table[WebhooksTable]
   Row[WebhookTableRow]
+  Grid[MovieGrid / MovieCard]
+  Poster[MoviePoster]
   Pagination[WebhookPagination]
   Dialog[WebhookEditDialog]
   DialogHook[useWebhookEditDialog]
@@ -145,14 +164,17 @@ flowchart TD
   Hook --> Fetch
   Page --> Search
   Page --> States
+  Page --> Switch
   Page --> Table
   Table --> Row
+  Page --> Grid
+  Grid --> Poster
   Page --> Pagination
   Page --> Dialog
   Dialog --> DialogHook
 ```
 
-`useWebhooksPage` decides which result state to show; `WebhooksPage` composes components; individual rows handle display and copy-URL feedback. The dialog owns form-specific state through a separate hook.
+`useWebhooksPage` decides which result state to show; `WebhooksPage` chooses the presentation using `useCatalogViewMode`. The table and grid receive the **same** `records.data` and `openEdit` callback. Only the view preference goes to `localStorage` (`frame50.catalogView`); search/page remain in the URL and are not reset when switching. Grid is the default when no valid stored choice exists. Individual rows handle display and copy-URL feedback; the dialog owns form-specific state through a separate hook.
 
 ## 5. HTTP, CSRF, and session recovery
 
@@ -195,7 +217,9 @@ sequenceDiagram
 
 **Race-safety invariant:** a response from an earlier login/session must not populate the current UI after logout or re-login. Protected requests compare captured `authEpoch` against the active one before returning data. The mutation hook separately checks the auth epoch before updating the cache. Rotation uses generation checks to coordinate concurrent 401s within one epoch.
 
-**Abort nuance:** requests honor `AbortSignal`; an aborted waiter does not necessarily cancel the shared rotation needed by other callers.
+**Abort nuance:** requests honor `AbortSignal`; an aborted waiter does not necessarily cancel the shared rotation needed by other callers. This avoids allowing one cancelled consumer to interrupt recovery for others.
+
+**Retry budgets:** each protected call permits at most one authentication recovery and one CSRF recovery. They are separate budgets, not a promise of eventual success. A failed rotation or a second `401` invalidates the current epoch; the request does not enter an infinite retry loop.
 
 ### 5.3 CSRF expiration recovery
 
@@ -233,6 +257,8 @@ flowchart LR
   End --> Clear[Cancel + clear private query cache]
   Clear --> Redirect[Login route]
 ```
+
+**Login/logout race control:** `authApi.ts` increments a login-attempt counter to reject obsolete completions and serializes revocations using `revokeChain`. A new login waits for pending revocations, preventing a late revoke from racing with a newly issued session. This is distinct from the single-flight `401` recovery used by protected queries.
 
 The returned token is stored **in JS module memory** (`deviceSession.ts`), not localStorage. The fingerprint alone is persisted to localStorage. The mock stores the issued session internally as an analogue of a server-managed HttpOnly cookie. A page refresh loses the frontend session and requires sign-in again. `RequireAuth` preserves the original pathname/search in route state so a successful sign-in can return to the intended catalog URL.
 
@@ -273,7 +299,7 @@ sequenceDiagram
 
 The list is **invalidated**, not optimistically rewritten. This is a reasonable choice for a small paginated, server-sorted dataset because edits can alter which rows match a search. The cost is an extra list request; a real large catalog might warrant more explicit cache policies or optimistic behavior after measuring actual user experience.
 
-The request/response model still uses the internal `Webhook` type (`id`, `name`, `url`, `rating`, `duration`, `active`, `created_at`). UI presents `name` as a movie title, `url` as an IMDb search link, `rating` and `duration` as display metadata, and `created_at` as a release date. Only `name` and `url` can be edited.
+The request/response model still uses the internal `Webhook` type (`id`, `name`, `url`, `rating`, `duration`, `poster_path`, `active`, `created_at`). UI presents `name` as a movie title, `url` as an IMDb search link, `rating` and `duration` as display metadata, and `created_at` as a release date. Only `name` and `url` can be edited.
 
 ## 8. Local MSW boundary and data assumptions
 
@@ -314,17 +340,74 @@ This repository uses Vitest + React Testing Library with an MSW Node test server
 | HTTP and CSRF | Token loading, header behavior, error parsing, retries | `src/shared/api/*.test.ts` |
 | Protected requests / session | Concurrent `401`, rotation failure, aborts, stale epochs and retries | `src/shared/api/protectedClient.test.ts`, `src/shared/session/sessionManager.test.ts` |
 | Router, login and catalog | Guard, login, search, URL normalization, pagination, edit flows | `src/features/auth/__tests__`, `src/app/pages/webhooks/__tests__` |
-| Pure utility behavior | Search-param rules, debounce, fingerprint and clipboard | `src/app/pages/webhooks/list/utils`, `src/shared/hooks`, `src/shared/utils` |
+| Pure utility behavior | Search-param rules, debounce, fingerprint, clipboard and poster URLs | `src/app/pages/webhooks/list/utils`, `src/shared/hooks`, `src/shared/utils`, `src/features/webhooks/utils/posterUrl.test.ts` |
+| View composition | Grid default and persisted mode, switching without refetch, nine results, edit actions | `src/app/pages/webhooks/__tests__/catalogView.test.tsx` |
+| Poster lifecycle | Load/blur/error state, per-path reset and responsive source attributes | `src/app/pages/webhooks/list/components/MoviePoster.test.tsx` |
 
-The tests cover unit and integrated frontend flows. They do not establish browser-level E2E coverage, real backend compatibility, security audit results, or performance benchmarks.
+The tests cover unit and integrated frontend flows. They do not establish browser-level E2E coverage, real backend compatibility, security audit results or performance benchmarks. In particular, an image element's DOM attributes and dispatched load/error events do not measure actual CDN network behavior.
 
-## 11. Intentional limitations and possible extensions
+## 11. Table/Grid presentation: one source of truth (D8)
+
+**Problem.** Two presentations of the same catalog can easily grow separate searches, pagination state, fetches or edit flows. That makes the UI inconsistent and creates network work solely because a user changes layout.
+
+**Implemented decision.** `WebhooksPage` calls `useWebhooksPage` once and passes its paginated `records.data` to either `WebhooksTable` or `MovieGrid`. The same `openEdit` handler opens `WebhookEditDialog`. `useCatalogViewMode` stores the chosen view in `localStorage` under `frame50.catalogView`; **Grid is the default** when the value is absent or invalid. The view selection does not change the query key or URL. Search/pagination remain driven by `useWebhookListState` and are independent of the display choice.
+
+```mermaid
+flowchart TB
+  Page["WebhooksPage"]
+  State["useWebhooksPage"]
+  Data["TanStack Query catalog result"]
+  Mode["useCatalogViewMode"]
+  Choice{"View mode"}
+  Table["WebhooksTable"]
+  Grid["MovieGrid"]
+  Card["MovieCard"]
+  Dialog["Shared edit dialog"]
+  Page --> State
+  State --> Data
+  Page --> Mode
+  Mode --> Choice
+  Data --> Choice
+  Choice -->|Table| Table
+  Choice -->|Grid| Grid
+  Grid --> Card
+  Table --> Dialog
+  Card --> Dialog
+```
+
+**Trade-off.** Two presentation components are maintained, but one data lifecycle remains authoritative. Table-specific tests explicitly set table mode because the product's default is now grid.
+
+## 12. Optimized poster delivery and lifecycle (D9)
+
+**Problem.** A gallery can waste bandwidth by requesting oversized offscreen images, shift its layout while images load, and leave blank or broken cards when a CDN request fails.
+
+**Implemented decision.** The MSW movie fixtures supply a static `poster_path` per record. The catalog does **not** call the TMDB API at runtime: the browser builds URLs under `https://image.tmdb.org/t/p/` and requests posters from the **TMDB Image CDN**, separately from the mocked catalog API. `posterUrl.ts` constructs `w185`, `w342` and `w500` variants with `srcSet`, with `src` at `w342` and `sizes` matching a 104px base / 112px `md` poster column. Actual source selection is browser-controlled, including device-pixel ratio.
+
+`MovieGrid` renders only the current nine records. The first poster is eager with `fetchPriority="high"`; the next two are eager; the remaining posters are lazy. Each `MoviePoster` reserves a **2:3** region, uses `decoding="async"`, displays a blurred CSS gradient until the image fires `onLoad`, and fades the image in. On `onError` or a null path, the same region displays **Poster unavailable**. The transition is disabled by `prefers-reduced-motion`.
+
+The inner `PosterImage` is keyed by `posterPath`, making load/error state specific to the current path. Switching A → B → A remounts the image state, so an earlier failure does not permanently block a retry. No extra low-resolution placeholder image is downloaded, and no custom preloading or `IntersectionObserver` has been added.
+
+```mermaid
+flowchart TD
+  Data["Local MSW movie data"] --> Path["Static poster_path"]
+  Path --> URL["posterUrl + srcSet + sizes"]
+  URL --> Browser["Native img loading"]
+  Browser -->|Eager or lazy| CDN["TMDB Image CDN"]
+  Browser --> Placeholder["Reserved 2:3 blurred placeholder"]
+  CDN -->|onLoad| Visible["Fade in poster"]
+  CDN -->|onError| Fallback["Poster unavailable"]
+  Path -->|null| Fallback
+```
+
+**Trade-offs and limits.** The stable CDN URLs can benefit from normal browser caching, but images still depend on TMDB availability and correct static mappings. A `w185` or `w342` request is not proof of a measured byte saving or improved LCP; those require real-device and network profiling. Film ratings remain editorial and are not sourced from TMDB. The UI includes TMDB attribution and a non-endorsement notice, with no claim that TMDB sponsors Frame50.
+
+## 13. Intentional limitations and possible extensions
 
 - **No standalone production API:** add a real backend or an explicitly production-supported demo mocking strategy before advertising a public live demo.
 - **Ephemeral data:** a database or persistence adapter would be necessary for durable edits; the current scope does not require one.
-- **Desktop-first UI:** mobile layouts and accessibility should be manually verified as deployment requirements evolve.
+- **Responsive UI, not a browser-audited product:** the grid uses one/two/three columns at base/md/lg breakpoints. Real-device accessibility and visual regression testing are still appropriate.
 - **Existing internal naming:** webhook-specific symbols remain; changing them would be an orthogonal, nonessential refactor.
-- **Static editorial dataset:** 50 items are sufficient to demonstrate list behavior. Scale tests, server-side pagination under real latency, virtualization, and observability are not demonstrated.
+- **Static editorial dataset and posters:** 50 movies use static ratings, release metadata and TMDB poster paths. No runtime TMDB metadata fetch or IMDb scraping occurs. Large-scale behavior, real latency, measured image performance and observability are not demonstrated.
 - **Security simulation only:** a production auth flow would need proper cookie/session handling, CSRF/captcha enforcement, session fixation defense and server-side review.
 
 The engineering lesson is deliberately modest: **predictable state transitions, explicit boundaries, and bounded recovery mechanisms make even a small UI maintainable under asynchronous failure.**
