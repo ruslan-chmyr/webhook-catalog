@@ -4,6 +4,7 @@ export type Webhook = {
   url: string;
   rating: number;
   duration: number;
+  poster_path: string | null;
   active: boolean;
   created_at: string;
 };

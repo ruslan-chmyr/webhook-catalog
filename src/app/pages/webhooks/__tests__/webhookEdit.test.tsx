@@ -115,6 +115,7 @@ describe('webhook detail and editing', () => {
       active: before.active,
       rating: before.rating,
       duration: before.duration,
+      poster_path: before.poster_path,
       created_at: before.created_at,
       name: 'Updated webhook',
       url: 'https://example.com/webhook',

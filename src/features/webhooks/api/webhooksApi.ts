@@ -92,7 +92,7 @@ export function parseWebhook(value: unknown): Webhook {
     throw new Error('Webhooks response is invalid.');
   }
 
-  const { id, name, url, rating, duration, active, created_at: createdAt } = value;
+  const { id, name, url, rating, duration, poster_path: posterPath, active, created_at: createdAt } = value;
   if (
     typeof id !== 'string' ||
     typeof name !== 'string' ||
@@ -113,9 +113,22 @@ export function parseWebhook(value: unknown): Webhook {
     url,
     rating,
     duration,
+    poster_path: readPosterPath(posterPath),
     active,
     created_at: createdAt,
   };
+}
+
+function readPosterPath(value: unknown): string | null {
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  if (typeof value !== 'string' || !value.startsWith('/') || value.includes('//') || /\s/.test(value)) {
+    throw new Error('Webhooks response is invalid.');
+  }
+
+  return value;
 }
 
 function readNumber(record: Record<string, unknown>, key: string): number {

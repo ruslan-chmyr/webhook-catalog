@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Button, HStack, Table, Text } from '@chakra-ui/react';
 import type { Webhook } from '@/features/webhooks/model/types';
 import { copyText } from '@/shared/utils/copyText';
+import { formatDuration } from '../utils/movieFacts';
 
 const releasedAtFormat = new Intl.DateTimeFormat('en-US', {
   month: 'short',
@@ -107,19 +108,6 @@ function CheckIcon() {
       <path d="M20 6 9 17l-5-5" />
     </svg>
   );
-}
-
-function formatDuration(minutes: number): string {
-  const hours = Math.floor(minutes / 60);
-  const remainder = minutes % 60;
-  if (hours === 0) {
-    return `${remainder}m`;
-  }
-  if (remainder === 0) {
-    return `${hours}h`;
-  }
-
-  return `${hours}h ${remainder}m`;
 }
 
 function cutLink(url: string): string {

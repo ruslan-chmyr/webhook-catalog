@@ -1,4 +1,4 @@
-export const WEBHOOK_PAGE_LIMIT = 10;
+export const WEBHOOK_PAGE_LIMIT = 9;
 
 const PAGE_PATTERN = /^[1-9]\d*$/;
 
