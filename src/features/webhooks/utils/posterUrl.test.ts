@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { posterSrcSet, posterUrl } from './posterUrl';
+import { POSTER_CARD_SIZES, posterSrcSet, posterUrl } from './posterUrl';
 
 const posterPath = '/9cqNxx0GxF0bflZmeSMuL5tnGzr.jpg';
 
@@ -25,5 +25,10 @@ describe('poster URLs', () => {
       ].join(', '),
     );
     expect(posterSrcSet(posterPath)).not.toContain('/original/');
+  });
+
+  it('targets horizontal card poster widths in sizes', () => {
+    expect(POSTER_CARD_SIZES).toContain('112px');
+    expect(POSTER_CARD_SIZES).not.toContain('45vw');
   });
 });

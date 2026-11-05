@@ -66,8 +66,7 @@ describe('catalog view', () => {
     const card = await screen.findByRole('article', { name: 'The Shawshank Redemption' });
     expect(screen.getAllByRole('article')).toHaveLength(9);
     expect(within(card).getByText('9.3')).toBeInTheDocument();
-    expect(within(card).getByText('1994')).toBeInTheDocument();
-    expect(within(card).getByText('2h 22m')).toBeInTheDocument();
+    expect(within(card).getByText('1994 · 2h 22m')).toBeInTheDocument();
     expect(screen.queryByRole('columnheader', { name: 'Movie title' })).not.toBeInTheDocument();
     expect(localStorage.getItem(CATALOG_VIEW_STORAGE_KEY)).toBe('grid');
 

@@ -12,7 +12,7 @@ function posterPriority(index: number): PosterPriority {
   if (index === 0) {
     return 'high';
   }
-  if (index < 4) {
+  if (index < 3) {
     return 'eager';
   }
 
@@ -23,11 +23,11 @@ export function MovieGrid({ webhooks, onEdit }: MovieGridProps) {
   return (
     <Grid
       templateColumns={{
-        base: 'repeat(2, minmax(0, 1fr))',
-        md: 'repeat(3, minmax(0, 1fr))',
-        lg: 'repeat(4, minmax(0, 1fr))',
+        base: 'minmax(0, 1fr)',
+        md: 'repeat(2, minmax(0, 1fr))',
+        lg: 'repeat(3, minmax(0, 1fr))',
       }}
-      gap="4"
+      gap={{ base: '3', md: '4' }}
     >
       {webhooks.map((webhook, index) => (
         <MovieCard key={webhook.id} webhook={webhook} priority={posterPriority(index)} onEdit={onEdit} />

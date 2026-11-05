@@ -6,7 +6,8 @@ export type PosterWidth = (typeof POSTER_WIDTHS)[number];
 
 export const POSTER_DEFAULT_WIDTH: PosterWidth = 'w342';
 
-export const POSTER_SIZES = '(min-width: 62em) 220px, (min-width: 48em) 30vw, 45vw';
+/** Horizontal grid cards: poster column is ~96–112px wide on typical layouts. */
+export const POSTER_CARD_SIZES = '(min-width: 62em) 112px, (min-width: 48em) 136px, 104px';
 
 export function posterUrl(posterPath: string, width: PosterWidth): string {
   return `${TMDB_IMAGE_BASE}${width}${posterPath}`;

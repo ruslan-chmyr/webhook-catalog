@@ -14,55 +14,68 @@ export function WebhookPagination({ current, last, summary, onPrevious, onNext, 
   const label = last === undefined ? `Page ${current}` : `Page ${current} of ${last}`;
 
   return (
-    <HStack as="nav" aria-label="Pagination" justify="space-between" gap="3" wrap="wrap">
-      <Text color="gray.600" fontSize="sm">
-        {summary ?? ''}
-      </Text>
-      <HStack gap="1">
-        <VisuallyHidden>{label}</VisuallyHidden>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          aria-label="Previous"
-          disabled={current <= 1}
-          onClick={onPrevious}
-        >
-          <Chevron direction="left" />
-        </Button>
-        {pages.map((page) => {
-          const isCurrent = page === current;
+    <HStack as="nav" aria-label="Pagination" justify="flex-end" gap="1" wrap="wrap" flexShrink={0}>
+      <VisuallyHidden>{label}</VisuallyHidden>
+      {summary ? (
+        <Text color="gray.600" fontSize="sm" mr="auto" display={{ base: 'none', sm: 'block' }}>
+          {summary}
+        </Text>
+      ) : null}
+      <Button
+        type="button"
+        size="sm"
+        minW="8"
+        h="8"
+        variant="outline"
+        borderColor="gray.200"
+        bg="white"
+        aria-label="Previous"
+        disabled={current <= 1}
+        onClick={onPrevious}
+      >
+        <Chevron direction="left" />
+      </Button>
+      {pages.map((page) => {
+        const isCurrent = page === current;
 
-          return (
-            <Button
-              key={page}
-              type="button"
-              size="sm"
-              minW="9"
-              variant={isCurrent ? 'solid' : 'outline'}
-              colorPalette={isCurrent ? 'blue' : 'gray'}
-              aria-label={`Page ${page}`}
-              aria-current={isCurrent ? 'page' : undefined}
-              disabled={isCurrent}
-              onClick={() => {
-                onPage(page);
-              }}
-            >
-              {page}
-            </Button>
-          );
-        })}
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          aria-label="Next"
-          disabled={last === undefined || current >= last}
-          onClick={onNext}
-        >
-          <Chevron direction="right" />
-        </Button>
-      </HStack>
+        return (
+          <Button
+            key={page}
+            type="button"
+            size="sm"
+            minW="8"
+            h="8"
+            px="2"
+            variant={isCurrent ? 'solid' : 'outline'}
+            bg={isCurrent ? 'gray.900' : 'white'}
+            color={isCurrent ? 'white' : 'gray.800'}
+            borderColor="gray.200"
+            _hover={{ bg: isCurrent ? 'gray.800' : 'gray.50' }}
+            aria-label={`Page ${page}`}
+            aria-current={isCurrent ? 'page' : undefined}
+            disabled={isCurrent}
+            onClick={() => {
+              onPage(page);
+            }}
+          >
+            {page}
+          </Button>
+        );
+      })}
+      <Button
+        type="button"
+        size="sm"
+        minW="8"
+        h="8"
+        variant="outline"
+        borderColor="gray.200"
+        bg="white"
+        aria-label="Next"
+        disabled={last === undefined || current >= last}
+        onClick={onNext}
+      >
+        <Chevron direction="right" />
+      </Button>
     </HStack>
   );
 }

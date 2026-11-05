@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import { Box, Flex, Text } from '@chakra-ui/react';
-import { POSTER_DEFAULT_WIDTH, POSTER_SIZES, posterSrcSet, posterUrl } from '@/features/webhooks/utils/posterUrl';
+import {
+  POSTER_CARD_SIZES,
+  POSTER_DEFAULT_WIDTH,
+  posterSrcSet,
+  posterUrl,
+} from '@/features/webhooks/utils/posterUrl';
 
 export type PosterPriority = 'high' | 'eager' | 'lazy';
 
@@ -8,19 +13,35 @@ type MoviePosterProps = {
   posterPath: string | null;
   title: string;
   priority: PosterPriority;
+  sizes?: string;
+  roundedStart?: boolean;
 };
 
 const placeholderBackground =
   'radial-gradient(circle at 30% 18%, #f7f4ee 0%, transparent 46%), linear-gradient(155deg, #d5dde6 0%, #7d8b9c 46%, #e4e8ee 100%)';
 
-export function MoviePoster({ posterPath, title, priority }: MoviePosterProps) {
+export function MoviePoster({
+  posterPath,
+  title,
+  priority,
+  sizes = POSTER_CARD_SIZES,
+  roundedStart = false,
+}: MoviePosterProps) {
   const [failedPath, setFailedPath] = useState<string | null>(null);
   const [loadedPath, setLoadedPath] = useState<string | null>(null);
   const availablePath = posterPath !== null && failedPath !== posterPath ? posterPath : null;
   const loaded = availablePath !== null && loadedPath === availablePath;
 
   return (
-    <Box position="relative" overflow="hidden" bg="gray.200" style={{ aspectRatio: '2 / 3' }}>
+    <Box
+      position="relative"
+      overflow="hidden"
+      bg="gray.200"
+      h="full"
+      minH="9.75rem"
+      style={{ aspectRatio: '2 / 3' }}
+      roundedStart={roundedStart ? 'md' : undefined}
+    >
       {availablePath !== null ? (
         <>
           <Box
@@ -42,7 +63,7 @@ export function MoviePoster({ posterPath, title, priority }: MoviePosterProps) {
             alt={`Poster for ${title}`}
             src={posterUrl(availablePath, POSTER_DEFAULT_WIDTH)}
             srcSet={posterSrcSet(availablePath)}
-            sizes={POSTER_SIZES}
+            sizes={sizes}
             width={342}
             height={513}
             decoding="async"
@@ -66,8 +87,8 @@ export function MoviePoster({ posterPath, title, priority }: MoviePosterProps) {
           />
         </>
       ) : (
-        <Flex position="absolute" inset="0" align="center" justify="center" px="3" textAlign="center">
-          <Text fontSize="sm" color="gray.600">
+        <Flex position="absolute" inset="0" align="center" justify="center" px="2" textAlign="center">
+          <Text fontSize="xs" color="gray.600">
             Poster unavailable
           </Text>
         </Flex>
