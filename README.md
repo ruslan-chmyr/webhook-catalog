@@ -4,7 +4,7 @@
 
 Frame50 lets you explore 50 curated films, switch between an editorial poster grid and a data table, search by title, browse nine results per page, and edit a movie's title or IMDb search link. The catalog is intentionally modest; the engineering focus is **authentication recovery, request concurrency, cache isolation, and resilient UI state**.
 
-![Illustrative Frame50 catalog preview](docs/assets/frame50-ui-preview.svg)
+![Illustrative Frame50 catalog preview](docs/assets/frame50-ui-preview.png)
 
 <sub>Illustrative UI preview, not a screenshot of the latest grid. The poster cards use static TMDB image paths; ratings are editorial fixture data, not live IMDb or TMDB scores. Replace this preview with a current screenshot when available.</sub>
 
