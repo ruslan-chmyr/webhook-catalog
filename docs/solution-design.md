@@ -110,7 +110,7 @@ sequenceDiagram
   User->>Search: Type a movie title
   Search->>State: setInput(value)
   Note over State: 350 ms debounce + normalization
-  State->>Router: replace search; reset page=1
+  State->>Router: Replace URL search and reset page to 1
   Router-->>State: parsed page and search
   State->>Query: queryKey(page, limit=10, search)
   Query->>API: queryFn(signal)
@@ -263,7 +263,7 @@ sequenceDiagram
     API->>Query: setQueryData(detail)
     API->>Query: invalidateQueries(list prefix)
     API-->>Dialog: Mutation complete
-    Dialog-->>User: Close dialog; list refetches
+    Dialog-->>User: Close dialog and refetch list
   else HTTP 422 or other failure
     MSW-->>API: Error response
     API-->>Dialog: Field or general error
