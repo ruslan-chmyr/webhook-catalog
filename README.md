@@ -6,8 +6,6 @@ Frame50 lets you explore 50 curated films, switch between an editorial poster gr
 
 ![Illustrative Frame50 catalog preview](docs/assets/frame50-ui-preview.png)
 
-<sub>Illustrative UI preview, not a screenshot of the latest grid. The poster cards use static TMDB image paths; ratings are editorial fixture data, not live IMDb or TMDB scores. Replace this preview with a current screenshot when available.</sub>
-
 ## The engineering challenge
 
 A protected data screen is easy in the happy path. The edge cases are harder: several requests expire together; a refresh returns after logout; a CSRF token goes stale during an edit; search and navigation change while data is loading. **How do we recover once, avoid accepting old responses, and keep the UI consistent?**
@@ -103,5 +101,3 @@ Password: Frame50App-Demo-2026!
 - **No live film integration.** Movie metadata and ratings are local fixtures; IMDb links open search results. TMDB poster paths are a static snapshot and images load directly from its CDN. This product is not endorsed by TMDB.
 - **Ephemeral edits.** Updating title/URL changes mock memory; data is not persisted. Create/delete/status editing are outside scope.
 - **Performance techniques, not benchmark claims.** Native image loading and responsive `srcSet` are implemented; no measured LCP/CLS or real-browser end-to-end performance results are claimed.
-
-Originally a frontend technical assignment, adapted into a portfolio case study without replacing its core architectural decisions.
