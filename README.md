@@ -1,79 +1,76 @@
 # Frame50
 
-**50 iconic films. One small product. A closer look at production-minded frontend decisions.**
+**A small movie catalog built around a difficult frontend problem: keeping authenticated, concurrent requests predictable.**
 
-Frame50 is a curated movie catalog where users can sign in, explore 50 films sorted by rating, search by title, navigate paginated results, copy IMDb links, and edit a movie's title or link. The movie catalog is deliberately simple: the engineering case is about keeping **navigation, server state, forms, and authentication consistent** even when requests overlap or fail.
+Frame50 lets you explore 50 curated films, switch between an editorial poster grid and a data table, search by title, browse nine results per page, and edit a movie's title or IMDb search link. The catalog is intentionally modest; the engineering focus is **authentication recovery, request concurrency, cache isolation, and resilient UI state**.
 
-![Illustrative Frame50 UI preview](docs/assets/frame50-ui-preview.svg)
+![Illustrative Frame50 catalog preview](docs/assets/frame50-ui-preview.svg)
 
-<sub>Illustrative preview of the current screen structure, not a live screenshot. Ratings and movie information are local demo fixtures, not a live IMDb feed.</sub>
+<sub>Illustrative UI preview, not a screenshot of the latest grid. The poster cards use static TMDB image paths; ratings are editorial fixture data, not live IMDb or TMDB scores. Replace this preview with a current screenshot when available.</sub>
 
-## The engineering problem
+## The engineering challenge
 
-A CRUD-style interface looks straightforward until a user searches, changes pages, edits a record, or loses their session while multiple requests are in flight. The design has to answer a few practical questions:
+A protected data screen is easy in the happy path. The edge cases are harder: several requests expire together; a refresh returns after logout; a CSRF token goes stale during an edit; search and navigation change while data is loading. **How do we recover once, avoid accepting old responses, and keep the UI consistent?**
 
-- How do we keep search, pagination, and browser history in sync?
-- How do we avoid stale private data when a session ends or changes?
-- How do we recover from expired sessions and CSRF tokens without retry loops?
-- How do we keep pages focused on rendering rather than HTTP and state coordination?
+## Decisions worth reviewing
 
-## Decisions that matter
-
-| Problem | Decision in this codebase | Outcome |
+| Problem | Implemented decision | Why it matters |
 | --- | --- | --- |
-| Search and page can drift from the URL | [Canonical URL state](src/app/pages/webhooks/list/hooks/useWebhookListState.ts) + 350 ms debounced search; page resets on new search | Shareable routes, consistent Back/Forward navigation |
-| Multiple requests can receive `401` at once | [Shared rotation](src/shared/session/sessionManager.ts) and [bounded retries](src/shared/api/protectedClient.ts) with session-generation checks | No duplicate rotation storm; stale requests cannot silently revive an old session |
-| Expired CSRF token can break an edit | [Shared CSRF refresh](src/shared/api/protectedClient.ts) after `419`, retried at most once per protected call | Predictable recovery without unbounded retries |
-| Saved edits can leave old list data visible | [Detail-cache update + list invalidation](src/features/webhooks/hooks/useUpdateWebhook.ts); private cache cleared on logout | Consistent server-state lifecycle |
-| UI and network rules are easy to entangle | [Page orchestration](src/app/pages/webhooks/list/hooks/useWebhooksPage.ts), colocated feature UI, shared HTTP/session infrastructure | Components stay focused, with independently testable behavior |
+| Multiple requests receive `401` together | [Single-flight session rotation](src/shared/session/sessionManager.ts), [bounded recovery](src/shared/api/protectedClient.ts), and generation checks | Concurrent callers share one rotation rather than producing redundant refresh requests |
+| An old request finishes after logout or re-login | [Auth epochs](src/shared/session/sessionManager.ts) guard protected responses and [mutations](src/features/webhooks/hooks/useUpdateWebhook.ts); [private queries](src/app/composition.ts) are cancelled/removed on invalidation | Old work cannot repopulate a new session's private cache |
+| CSRF token expires during a write | [Shared CSRF token manager](src/shared/api/csrf.ts); recover from `419` with at most one CSRF retry per protected call | Failure recovery is explicit and bounded |
+| Search and pagination diverge from browser history | [Canonical URL state](src/app/pages/webhooks/list/hooks/useWebhookListState.ts) and 350 ms debounced search | Stable back/forward behavior and shareable search results |
+| Two views risk duplicating data logic | [Table/Grid switch](src/app/pages/webhooks/list/WebhooksPage.tsx) shares one paginated TanStack Query result and the same edit dialog | View changes do not refetch or reset page/search |
+| Poster images hurt perceived loading | [Responsive TMDB URLs](src/features/webhooks/utils/posterUrl.ts) and [isolated poster lifecycle](src/app/pages/webhooks/list/components/MoviePoster.tsx) | Reserved aspect ratio, lazy images, blur placeholder, accessible fallback |
 
-## At a glance
+The main case study is **auth and request lifecycle correctness**. The catalog views and images are supporting examples of separation of concerns.
+
+## System at a glance
 
 ```mermaid
 flowchart LR
-    UI[React pages and components] --> Hooks[Page hooks and feature hooks]
-    Hooks --> Query[TanStack Query]
-    Query --> API[Typed API functions]
-    API --> Client[Protected HTTP client]
-    Client --> MSW[MSW mock API]
-    Client --> Session[Session and CSRF managers]
-    UI --> URL[React Router URL state]
-    URL --> Hooks
+  Pages["Login + Catalog UI"] --> Hooks["Page / feature hooks"]
+  Hooks --> Query["TanStack Query"]
+  Query --> API["Typed API functions"]
+  API --> Client["Protected HTTP client"]
+  Client --> Session["Session manager / auth epochs"]
+  Client --> CSRF["CSRF manager"]
+  Client --> MSW["MSW mock API"]
+  Pages --> Router["React Router URL state"]
+  Grid["Movie grid / posters"] --> CDN["TMDB Image CDN"]
+  Hooks --> Grid
 ```
 
-The diagram shows actual module responsibilities. **MSW is a browser-side mock API, not a separate production server.**
-
-**[Read the Solution Design →](docs/solution-design.md)** — detailed flows, sequence diagrams, module boundaries, trade-offs, and test coverage.
+**[Read the Solution Design](docs/solution-design.md)** for the authentication sequence, concurrent `401` and `419` flows, failure invariants, query-cache decisions, view composition, poster-loading behavior, and trade-offs.
 
 ## Project structure
 
 ```text
 src/
 ├── app/
-│   ├── composition.ts             # QueryClient, HTTP client and session wiring
-│   ├── router.tsx                  # Login and protected catalog route
-│   ├── components/                # Application shell and header
+│   ├── composition.ts             # QueryClient, HTTP and session wiring
+│   ├── router.tsx                  # Protected catalog and login routes
 │   └── pages/
-│       ├── login/                 # Login UI, form hook and validation
-│       └── webhooks/              # Catalog page, search, table and edit dialog
+│       ├── login/                 # Login UI, form state and redirect
+│       └── webhooks/
+│           ├── list/             # Page composition, table/grid, poster, URL state
+│           └── edit/             # Shared edit dialog, validation and save flow
 ├── features/
-│   ├── auth/                       # Auth API, hooks and session-related model
-│   └── webhooks/                   # Catalog API, query hooks, types and keys
+│   ├── auth/                       # Auth API, identity and session models
+│   └── webhooks/                   # Catalog API, queries, mutation and poster URLs
 ├── shared/
-│   ├── api/                        # HTTP, protected request and CSRF logic
-│   ├── session/                    # Session concurrency manager
-│   ├── hooks/                      # Reusable hooks
-│   ├── ui/                         # Shared dialog
-│   └── utils/                      # Clipboard helper
-├── mocks/                          # Local MSW handlers and movie fixtures
-└── test/                           # Test setup
+│   ├── api/                        # HTTP transport, protected retries, CSRF
+│   ├── session/                    # Single-flight rotation and auth epochs
+│   └── hooks/, ui/, utils/         # Shared primitives
+├── mocks/                          # MSW endpoints, session simulation and 50 films
+└── test/                           # Integration test setup
 ```
 
-The internal `webhooks` names and `/v1/webhooks` endpoints are retained from the original API contract. Frame50 is the portfolio-facing product identity; this documentation describes the existing implementation rather than disguising it as a new backend.
+The `webhooks` names and `/v1/webhooks` routes intentionally retain the original take-home API contract. UI branding is **Frame50**, not a claim that the backend contract was rewritten.
 
 ## Stack
 
-React 19 · TypeScript (strict) · Vite · React Router · TanStack Query · Chakra UI v3 · MSW · Vitest · React Testing Library · oxlint.
+React 19 · strict TypeScript · Vite · React Router · TanStack Query · Chakra UI v3 · MSW · Vitest · React Testing Library · oxlint.
 
 ## Run locally
 
@@ -84,7 +81,7 @@ npm install
 npm run dev
 ```
 
-Use the credentials displayed on the login screen:
+Demo login:
 
 ```text
 Email:    demo@example.com
@@ -93,18 +90,18 @@ Password: Frame50App-Demo-2026!
 
 | Command | Purpose |
 | --- | --- |
-| `npm run dev` | Vite development server with the MSW worker |
-| `npm test` | Unit and integration tests |
-| `npm run typecheck` | Strict TypeScript check |
+| `npm run dev` | Vite dev server; starts browser MSW before mounting React |
+| `npm test` | Vitest unit and integration tests |
+| `npm run typecheck` | Strict TypeScript checks |
 | `npm run lint` | oxlint |
-| `npm run build` | TypeScript project build + Vite production build |
+| `npm run build` | TypeScript + production bundle |
 
-## Scope and limitations
+## Honest boundaries
 
-- **Local API only:** Vite starts the browser MSW worker only in development (`import.meta.env.DEV`). A standalone production build or `npm run preview` does **not** provide an API by itself.
-- The 50 films, ratings, durations, and release dates are static editorial demo data. IMDb URLs are search links; there is no IMDb integration.
-- Edits update the in-memory mock data; they do not survive a full reset/reload. Create, delete, and status editing are not implemented.
-- Auth uses a simulated session (30-second TTL), a development captcha token, and an HttpOnly-cookie **analogue** in MSW. This is a frontend exercise, not a production security implementation.
-- The layout is primarily desktop-focused. The test suite covers unit and integration scenarios, not browser E2E tests.
+- **Auth is simulated, not production security.** MSW models session issuance/rotation/revocation (30-second mock TTL), with a server-held-cookie *analogue*—not a real HttpOnly cookie. The device token is held in memory, and refreshing the page requires sign-in again.
+- **Development mock API only.** `main.tsx` starts MSW only when `import.meta.env.DEV` is true. `npm run preview` does not provide an authenticated backend.
+- **No live film integration.** Movie metadata and ratings are local fixtures; IMDb links open search results. TMDB poster paths are a static snapshot and images load directly from its CDN. This product is not endorsed by TMDB.
+- **Ephemeral edits.** Updating title/URL changes mock memory; data is not persisted. Create/delete/status editing are outside scope.
+- **Performance techniques, not benchmark claims.** Native image loading and responsive `srcSet` are implemented; no measured LCP/CLS or real-browser end-to-end performance results are claimed.
 
-Originally built as a technical assignment and later adapted into a portfolio case study. The documentation intentionally highlights design choices and their limits without refactoring the original solution.
+Originally a frontend technical assignment, adapted into a portfolio case study without replacing its core architectural decisions.
