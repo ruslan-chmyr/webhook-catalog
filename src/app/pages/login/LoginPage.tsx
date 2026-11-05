@@ -51,10 +51,10 @@ export function LoginPage() {
           <Stack align="center" gap="2" textAlign="center">
             <BrandMark size={40} />
             <Heading as="h1" size="lg">
-              WebhookApp
+              Frame50
             </Heading>
             <Text color="gray.600" fontSize="sm">
-              Sign in to manage your webhooks
+              Explore and manage a curated collection of iconic movies.
             </Text>
           </Stack>
           <Field.Root invalid={hasEmailError}>
@@ -114,7 +114,7 @@ export function LoginPage() {
           <Box textAlign="center" fontSize="sm" color="gray.600">
             <Text fontWeight="medium">Demo credentials</Text>
             <Text>Email: demo@example.com</Text>
-            <Text>Password: WebhookApp-Demo-2026!</Text>
+            <Text>Password: Frame50App-Demo-2026!</Text>
           </Box>
         </Stack>
       </Box>

@@ -11,7 +11,7 @@ export function WebhookListSkeleton({ visible }: WebhookListSkeletonProps) {
 
   return (
     <Stack gap="3">
-      <VisuallyHidden>Loading webhooks…</VisuallyHidden>
+      <VisuallyHidden>Loading movies…</VisuallyHidden>
       {Array.from({ length: 6 }, (_, index) => (
         <Skeleton key={index} height="10" rounded="md" />
       ))}
@@ -36,7 +36,7 @@ export function WebhookListError({ visible, message, onRetry }: WebhookListError
         <EmptyState.Indicator>
           <ErrorMark />
         </EmptyState.Indicator>
-        <EmptyState.Title>Failed to load webhooks</EmptyState.Title>
+        <EmptyState.Title>Failed to load movies</EmptyState.Title>
         <EmptyState.Description>
           <Text as="span" role="alert">
             {message}
@@ -68,9 +68,9 @@ export function WebhookListEmpty({ visible, search }: WebhookListEmptyProps) {
         <EmptyState.Indicator>
           <InboxMark />
         </EmptyState.Indicator>
-        <EmptyState.Title>{hasSearch ? 'No webhooks match your search.' : 'No webhooks found.'}</EmptyState.Title>
+        <EmptyState.Title>{hasSearch ? 'No movies match your search.' : 'No movies found.'}</EmptyState.Title>
         <EmptyState.Description>
-          {hasSearch ? 'Try adjusting your search or check back later.' : 'Webhooks you add will show up here.'}
+          {hasSearch ? 'Try adjusting your search or check back later.' : 'Movies you add will show up here.'}
         </EmptyState.Description>
       </EmptyState.Content>
     </EmptyState.Root>

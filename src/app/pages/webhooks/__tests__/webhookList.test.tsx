@@ -12,7 +12,7 @@ import { WEBHOOK_SEARCH_DEBOUNCE_MS } from '../list/hooks/useWebhookListState';
 
 const credentials = {
   email: 'demo@example.com',
-  password: 'WebhookApp-Demo-2026!',
+  password: 'Frame50App-Demo-2026!',
 };
 
 function pathnameIs(pathname: string): (args: { request: Request }) => boolean {
@@ -61,7 +61,7 @@ async function openWebhooks(path = '/'): Promise<void> {
 }
 
 function searchBox(): HTMLElement {
-  return screen.getByRole('searchbox', { name: 'Search webhooks' });
+  return screen.getByRole('searchbox', { name: 'Search movies' });
 }
 
 async function advance(ms: number): Promise<void> {
@@ -104,11 +104,11 @@ describe('webhook list URL', () => {
     const requests = installWebhookProbe();
     await openWebhooks('/');
 
-    expect(await screen.findByRole('cell', { name: 'Webhook 01' })).toBeInTheDocument();
-    expect(screen.getByRole('cell', { name: 'Webhook 10' })).toBeInTheDocument();
-    expect(screen.queryByRole('cell', { name: 'Webhook 11' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('cell', { name: 'The Shawshank Redemption' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'The Matrix' })).toBeInTheDocument();
+    expect(screen.queryByRole('cell', { name: 'Star Wars' })).not.toBeInTheDocument();
     expect(router.state.location.search).toBe('');
-    expect(screen.getByText('Page 1 of 3')).toBeInTheDocument();
+    expect(screen.getByText('Page 1 of 5')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled();
     expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
     expect(requests.some((search) => search === '?page=1&limit=10&search=')).toBe(true);
@@ -118,88 +118,97 @@ describe('webhook list URL', () => {
     const requests = installWebhookProbe();
     await openWebhooks('/?page=2');
 
-    expect(await screen.findByRole('cell', { name: 'Webhook 11' })).toBeInTheDocument();
-    expect(screen.getByRole('cell', { name: 'Webhook 20' })).toBeInTheDocument();
-    expect(screen.queryByRole('cell', { name: 'Webhook 10' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('cell', { name: 'Webhook 21' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('cell', { name: 'Star Wars' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'City Lights' })).toBeInTheDocument();
+    expect(screen.queryByRole('cell', { name: 'The Matrix' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('cell', { name: 'Rear Window' })).not.toBeInTheDocument();
     expect(router.state.location.search).toBe('?page=2');
-    expect(screen.getByText('Page 2 of 3')).toBeInTheDocument();
+    expect(screen.getByText('Page 2 of 5')).toBeInTheDocument();
     expect(requests.some((search) => requestedPage(search) === '2' && requestedSearch(search) === '')).toBe(true);
     expect(requests.some((search) => search.includes('limit=10'))).toBe(true);
   });
 
   it('updates the URL from Next and Previous', async () => {
     await openWebhooks('/');
-    expect(await screen.findByRole('cell', { name: 'Webhook 01' })).toBeInTheDocument();
+    expect(await screen.findByRole('cell', { name: 'The Shawshank Redemption' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-    expect(await screen.findByRole('cell', { name: 'Webhook 11' })).toBeInTheDocument();
+    expect(await screen.findByRole('cell', { name: 'Star Wars' })).toBeInTheDocument();
     expect(router.state.location.search).toBe('?page=2');
 
     fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-    expect(await screen.findByRole('cell', { name: 'Webhook 21' })).toBeInTheDocument();
-    expect(screen.getByRole('cell', { name: 'Webhook 28' })).toBeInTheDocument();
+    expect(await screen.findByRole('cell', { name: 'Rear Window' })).toBeInTheDocument();
     expect(router.state.location.search).toBe('?page=3');
-    expect(screen.getByText('Page 3 of 3')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    expect(await screen.findByRole('cell', { name: 'Toy Story' })).toBeInTheDocument();
+    expect(router.state.location.search).toBe('?page=4');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    expect(await screen.findByRole('cell', { name: 'Jaws' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'Snow White and the Seven Dwarfs' })).toBeInTheDocument();
+    expect(router.state.location.search).toBe('?page=5');
+    expect(screen.getByText('Page 5 of 5')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
 
     fireEvent.click(screen.getByRole('button', { name: 'Previous' }));
-    expect(await screen.findByRole('cell', { name: 'Webhook 11' })).toBeInTheDocument();
-    expect(router.state.location.search).toBe('?page=2');
+    expect(await screen.findByRole('cell', { name: 'Toy Story' })).toBeInTheDocument();
+    expect(router.state.location.search).toBe('?page=4');
     expect(screen.getByRole('button', { name: 'Previous' })).toBeEnabled();
   });
 
   it('preserves the active search while moving between pages', async () => {
-    await openWebhooks('/?search=1');
+    await openWebhooks('/?search=the');
 
-    expect(await screen.findByRole('searchbox', { name: 'Search webhooks' })).toHaveValue('1');
-    expect(await screen.findByRole('cell', { name: 'Webhook 01' })).toBeInTheDocument();
-    expect(screen.getByRole('cell', { name: 'Webhook 10' })).toBeInTheDocument();
-    expect(screen.queryByRole('cell', { name: 'Webhook 02' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('searchbox', { name: 'Search movies' })).toHaveValue('the');
+    expect(await screen.findByRole('cell', { name: 'The Godfather' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: "Singin' in the Rain" })).toBeInTheDocument();
+    expect(screen.queryByRole('cell', { name: '12 Angry Men' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-    expect(await screen.findByRole('cell', { name: 'Webhook 19' })).toBeInTheDocument();
-    expect(screen.getByRole('cell', { name: 'Webhook 21' })).toBeInTheDocument();
-    expect(screen.queryByRole('cell', { name: 'Webhook 11' })).not.toBeInTheDocument();
-    expect(router.state.location.search).toBe('?page=2&search=1');
-    expect(searchBox()).toHaveValue('1');
+    expect(await screen.findByRole('cell', { name: 'Gone with the Wind' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'Snow White and the Seven Dwarfs' })).toBeInTheDocument();
+    expect(screen.queryByRole('cell', { name: "Singin' in the Rain" })).not.toBeInTheDocument();
+    expect(router.state.location.search).toBe('?page=2&search=the');
+    expect(searchBox()).toHaveValue('the');
 
     fireEvent.click(screen.getByRole('button', { name: 'Previous' }));
-    expect(await screen.findByRole('cell', { name: 'Webhook 10' })).toBeInTheDocument();
-    expect(router.state.location.search).toBe('?search=1');
-    expect(searchBox()).toHaveValue('1');
+    expect(await screen.findByRole('cell', { name: 'The Godfather' })).toBeInTheDocument();
+    expect(router.state.location.search).toBe('?search=the');
+    expect(searchBox()).toHaveValue('the');
   });
 
   it('initializes the search box from a direct URL', async () => {
-    await openWebhooks('/?page=2&search=1');
+    await openWebhooks('/?page=2&search=the');
 
-    expect(await screen.findByRole('searchbox', { name: 'Search webhooks' })).toHaveValue('1');
-    expect(await screen.findByRole('cell', { name: 'Webhook 19' })).toBeInTheDocument();
-    expect(router.state.location.search).toBe('?page=2&search=1');
+    expect(await screen.findByRole('searchbox', { name: 'Search movies' })).toHaveValue('the');
+    expect(await screen.findByRole('cell', { name: 'Gone with the Wind' })).toBeInTheDocument();
+    expect(router.state.location.search).toBe('?page=2&search=the');
   });
 
   it('rewrites non-canonical URLs without changing the resolved page', async () => {
     await openWebhooks('/?page=1');
-    expect(await screen.findByRole('cell', { name: 'Webhook 01' })).toBeInTheDocument();
+    expect(await screen.findByRole('cell', { name: 'The Shawshank Redemption' })).toBeInTheDocument();
     await waitFor(() => {
       expect(router.state.location.search).toBe('');
     });
 
     await act(async () => {
-      await router.navigate('/?search=%201%20');
+      await router.navigate('/?search=%20the%20');
     });
     await waitFor(() => {
-      expect(router.state.location.search).toBe('?search=1');
+      expect(router.state.location.search).toBe('?search=the');
     });
-    expect(searchBox()).toHaveValue('1');
-    expect(await screen.findByRole('cell', { name: 'Webhook 10' })).toBeInTheDocument();
-    expect(screen.queryByRole('cell', { name: 'Webhook 02' })).not.toBeInTheDocument();
+    expect(searchBox()).toHaveValue('the');
+    expect(await screen.findByRole('cell', { name: 'The Godfather' })).toBeInTheDocument();
+    expect(screen.queryByRole('cell', { name: '12 Angry Men' })).not.toBeInTheDocument();
 
     await act(async () => {
-      await router.navigate('/?search=1&page=2');
+      await router.navigate('/?search=the&page=2');
     });
     await waitFor(() => {
-      expect(router.state.location.search).toBe('?page=2&search=1');
+      expect(router.state.location.search).toBe('?page=2&search=the');
     });
 
     await act(async () => {
@@ -208,13 +217,13 @@ describe('webhook list URL', () => {
     await waitFor(() => {
       expect(router.state.location.search).toBe('?page=2');
     });
-    expect(await screen.findByRole('cell', { name: 'Webhook 11' })).toBeInTheDocument();
+    expect(await screen.findByRole('cell', { name: 'Star Wars' })).toBeInTheDocument();
   });
 
   it('normalizes invalid page parameters before requesting them', async () => {
     const requests = installWebhookProbe();
     await openWebhooks('/?page=0');
-    expect(await screen.findByRole('cell', { name: 'Webhook 01' })).toBeInTheDocument();
+    expect(await screen.findByRole('cell', { name: 'The Shawshank Redemption' })).toBeInTheDocument();
     await waitFor(() => {
       expect(router.state.location.search).toBe('');
     });
@@ -226,7 +235,7 @@ describe('webhook list URL', () => {
       await waitFor(() => {
         expect(router.state.location.search).toBe('');
       });
-      expect(screen.getByRole('cell', { name: 'Webhook 01' })).toBeInTheDocument();
+      expect(screen.getByRole('cell', { name: 'The Shawshank Redemption' })).toBeInTheDocument();
     }
 
     expect(requests.map(requestedPage).every((page) => page === '1')).toBe(true);
@@ -236,49 +245,49 @@ describe('webhook list URL', () => {
     const requests = installWebhookProbe();
     await openWebhooks('/?page=9');
 
-    expect(await screen.findByRole('cell', { name: 'Webhook 21' })).toBeInTheDocument();
-    expect(screen.getByRole('cell', { name: 'Webhook 28' })).toBeInTheDocument();
+    expect(await screen.findByRole('cell', { name: 'Jaws' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'Snow White and the Seven Dwarfs' })).toBeInTheDocument();
     await waitFor(() => {
-      expect(router.state.location.search).toBe('?page=3');
+      expect(router.state.location.search).toBe('?page=5');
     });
-    expect(screen.getByText('Page 3 of 3')).toBeInTheDocument();
+    expect(screen.getByText('Page 5 of 5')).toBeInTheDocument();
 
     const pages = requests.map(requestedPage);
-    expect(pages.every((page) => page === '9' || page === '3')).toBe(true);
+    expect(pages.every((page) => page === '9' || page === '5')).toBe(true);
     expect(pages.filter((page) => page === '9').length).toBeLessThanOrEqual(2);
-    expect(pages.filter((page) => page === '3').length).toBeGreaterThan(0);
-    expect(pages.filter((page) => page === '3').length).toBeLessThanOrEqual(2);
+    expect(pages.filter((page) => page === '5').length).toBeGreaterThan(0);
+    expect(pages.filter((page) => page === '5').length).toBeLessThanOrEqual(2);
 
     const settled = requests.length;
     await act(async () => {
       await Promise.resolve();
     });
     expect(requests).toHaveLength(settled);
-    expect(router.state.location.search).toBe('?page=3');
+    expect(router.state.location.search).toBe('?page=5');
   });
 
   it('restores the URL and search input across Back and Forward', async () => {
-    await openWebhooks('/?search=1');
-    expect(await screen.findByRole('searchbox', { name: 'Search webhooks' })).toHaveValue('1');
-    expect(await screen.findByRole('cell', { name: 'Webhook 10' })).toBeInTheDocument();
+    await openWebhooks('/?search=the');
+    expect(await screen.findByRole('searchbox', { name: 'Search movies' })).toHaveValue('the');
+    expect(await screen.findByRole('cell', { name: 'The Godfather' })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-    expect(await screen.findByRole('cell', { name: 'Webhook 19' })).toBeInTheDocument();
-    expect(router.state.location.search).toBe('?page=2&search=1');
+    expect(await screen.findByRole('cell', { name: 'Gone with the Wind' })).toBeInTheDocument();
+    expect(router.state.location.search).toBe('?page=2&search=the');
 
     await act(async () => {
       await router.navigate(-1);
     });
-    expect(router.state.location.search).toBe('?search=1');
-    expect(searchBox()).toHaveValue('1');
-    expect(await screen.findByRole('cell', { name: 'Webhook 10' })).toBeInTheDocument();
+    expect(router.state.location.search).toBe('?search=the');
+    expect(searchBox()).toHaveValue('the');
+    expect(await screen.findByRole('cell', { name: 'The Godfather' })).toBeInTheDocument();
 
     await act(async () => {
       await router.navigate(1);
     });
-    expect(router.state.location.search).toBe('?page=2&search=1');
-    expect(searchBox()).toHaveValue('1');
-    expect(await screen.findByRole('cell', { name: 'Webhook 19' })).toBeInTheDocument();
+    expect(router.state.location.search).toBe('?page=2&search=the');
+    expect(searchBox()).toHaveValue('the');
+    expect(await screen.findByRole('cell', { name: 'Gone with the Wind' })).toBeInTheDocument();
   });
 });
 
@@ -291,13 +300,13 @@ describe('webhook search debounce', () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     const requests = installWebhookProbe();
     await openWebhooks('/');
-    await waitForCell('Webhook 01');
+    await waitForCell('The Shawshank Redemption');
     const before = requests.length;
 
-    fireEvent.change(searchBox(), { target: { value: '  1  ' } });
-    expect(searchBox()).toHaveValue('  1  ');
+    fireEvent.change(searchBox(), { target: { value: '  the  ' } });
+    expect(searchBox()).toHaveValue('  the  ');
     expect(router.state.location.search).toBe('');
-    expect(screen.getByRole('cell', { name: 'Webhook 02' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: '12 Angry Men' })).toBeInTheDocument();
 
     await advance(WEBHOOK_SEARCH_DEBOUNCE_MS - 1);
     expect(router.state.location.search).toBe('');
@@ -309,81 +318,81 @@ describe('webhook search debounce', () => {
     ).toBe(true);
 
     await advance(1);
-    await waitForCell('Webhook 10');
-    expect(router.state.location.search).toBe('?search=1');
-    expect(searchBox()).toHaveValue('1');
-    expect(screen.queryByRole('cell', { name: 'Webhook 02' })).not.toBeInTheDocument();
-    expect(requests.slice(before).map(requestedSearch)).toContain('1');
+    await waitForCell('The Godfather');
+    expect(router.state.location.search).toBe('?search=the');
+    expect(searchBox()).toHaveValue('the');
+    expect(screen.queryByRole('cell', { name: '12 Angry Men' })).not.toBeInTheDocument();
+    expect(requests.slice(before).map(requestedSearch)).toContain('the');
     expect(requests.slice(before).every((search) => requestedPage(search) === '1')).toBe(true);
-    expect(queryClient.getQueryData(webhooksQueryKey({ page: 1, limit: 10, search: '1' }))).toBeDefined();
-    expect(queryClient.getQueryData(webhooksQueryKey({ page: 1, limit: 10, search: '  1  ' }))).toBeUndefined();
+    expect(queryClient.getQueryData(webhooksQueryKey({ page: 1, limit: 10, search: 'the' }))).toBeDefined();
+    expect(queryClient.getQueryData(webhooksQueryKey({ page: 1, limit: 10, search: '  the  ' }))).toBeUndefined();
   });
 
   it('sends only the final value when typing is rapid', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     const requests = installWebhookProbe();
     await openWebhooks('/');
-    await waitForCell('Webhook 01');
+    await waitForCell('The Shawshank Redemption');
     const before = requests.length;
 
-    fireEvent.change(searchBox(), { target: { value: 'w' } });
+    fireEvent.change(searchBox(), { target: { value: 's' } });
     await advance(100);
-    fireEvent.change(searchBox(), { target: { value: 'we' } });
+    fireEvent.change(searchBox(), { target: { value: 'sh' } });
     await advance(100);
-    fireEvent.change(searchBox(), { target: { value: 'web' } });
-    expect(searchBox()).toHaveValue('web');
+    fireEvent.change(searchBox(), { target: { value: 'sha' } });
+    expect(searchBox()).toHaveValue('sha');
 
     await advance(WEBHOOK_SEARCH_DEBOUNCE_MS - 1);
     expect(requests.slice(before)).toEqual([]);
 
     await advance(1);
-    await waitForCell('Webhook 01');
-    expect(router.state.location.search).toBe('?search=web');
+    await waitForCell('The Shawshank Redemption');
+    expect(router.state.location.search).toBe('?search=sha');
     const sent = requests.slice(before).map(requestedSearch);
     expect(sent.length).toBeGreaterThan(0);
-    expect(sent.every((search) => search === 'web')).toBe(true);
+    expect(sent.every((search) => search === 'sha')).toBe(true);
   });
 
   it('resets to page 1 when the applied search changes', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     await openWebhooks('/?page=2');
-    await waitForCell('Webhook 11');
+    await waitForCell('Star Wars');
 
-    fireEvent.change(searchBox(), { target: { value: '1' } });
+    fireEvent.change(searchBox(), { target: { value: 'the' } });
     await advance(WEBHOOK_SEARCH_DEBOUNCE_MS);
-    await waitForCell('Webhook 10');
+    await waitForCell('The Godfather');
 
-    expect(router.state.location.search).toBe('?search=1');
+    expect(router.state.location.search).toBe('?search=the');
     expect(screen.getByText('Page 1 of 2')).toBeInTheDocument();
-    expect(screen.queryByRole('cell', { name: 'Webhook 19' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('cell', { name: 'Webhook 02' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('cell', { name: 'Gone with the Wind' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('cell', { name: '12 Angry Men' })).not.toBeInTheDocument();
   });
 
   it('restores the unfiltered results when the search is cleared', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-    await openWebhooks('/?search=1');
-    await waitForCell('Webhook 10');
-    expect(screen.queryByRole('cell', { name: 'Webhook 02' })).not.toBeInTheDocument();
+    await openWebhooks('/?search=the');
+    await waitForCell('The Godfather');
+    expect(screen.queryByRole('cell', { name: '12 Angry Men' })).not.toBeInTheDocument();
 
     fireEvent.change(searchBox(), { target: { value: '' } });
     await advance(WEBHOOK_SEARCH_DEBOUNCE_MS);
-    await waitForCell('Webhook 02');
+    await waitForCell('12 Angry Men');
 
     expect(router.state.location.search).toBe('');
     expect(searchBox()).toHaveValue('');
-    expect(screen.getByRole('cell', { name: 'Webhook 01' })).toBeInTheDocument();
-    expect(screen.getByText('Page 1 of 3')).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'The Matrix' })).toBeInTheDocument();
+    expect(screen.getByText('Page 1 of 5')).toBeInTheDocument();
   });
 
   it('shows an empty state when nothing matches', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     await openWebhooks('/');
-    await waitForCell('Webhook 01');
+    await waitForCell('The Shawshank Redemption');
 
     fireEvent.change(searchBox(), { target: { value: 'zzzzzz' } });
     await advance(WEBHOOK_SEARCH_DEBOUNCE_MS);
 
-    await waitForText('No webhooks match your search.');
+    await waitForText('No movies match your search.');
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
     expect(screen.getByText('Page 1 of 1')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled();
@@ -393,27 +402,27 @@ describe('webhook search debounce', () => {
 
   it('does not let a pending search overwrite Back navigation', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
-    await openWebhooks('/?search=1');
-    await waitForCell('Webhook 10');
+    await openWebhooks('/?search=the');
+    await waitForCell('The Godfather');
 
     fireEvent.click(screen.getByRole('button', { name: 'Next' }));
-    await waitForCell('Webhook 19');
-    expect(router.state.location.search).toBe('?page=2&search=1');
+    await waitForCell('Gone with the Wind');
+    expect(router.state.location.search).toBe('?page=2&search=the');
 
     fireEvent.change(searchBox(), { target: { value: 'nope' } });
     expect(searchBox()).toHaveValue('nope');
-    expect(router.state.location.search).toBe('?page=2&search=1');
+    expect(router.state.location.search).toBe('?page=2&search=the');
 
     await act(async () => {
       await router.navigate(-1);
     });
-    expect(router.state.location.search).toBe('?search=1');
-    expect(searchBox()).toHaveValue('1');
+    expect(router.state.location.search).toBe('?search=the');
+    expect(searchBox()).toHaveValue('the');
 
     await advance(WEBHOOK_SEARCH_DEBOUNCE_MS + 50);
-    expect(router.state.location.search).toBe('?search=1');
-    expect(searchBox()).toHaveValue('1');
-    expect(screen.getByRole('cell', { name: 'Webhook 10' })).toBeInTheDocument();
-    expect(screen.queryByText('No webhooks match your search.')).not.toBeInTheDocument();
+    expect(router.state.location.search).toBe('?search=the');
+    expect(searchBox()).toHaveValue('the');
+    expect(screen.getByRole('cell', { name: 'The Godfather' })).toBeInTheDocument();
+    expect(screen.queryByText('No movies match your search.')).not.toBeInTheDocument();
   });
 });

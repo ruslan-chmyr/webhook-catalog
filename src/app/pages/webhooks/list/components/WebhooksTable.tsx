@@ -13,10 +13,11 @@ export function WebhooksTable({ webhooks, onEdit }: WebhooksTableProps) {
       <Table.Root size="sm" variant="line" minW="40rem">
         <Table.Header>
           <Table.Row>
-            <Table.ColumnHeader>Name</Table.ColumnHeader>
-            <Table.ColumnHeader>URL</Table.ColumnHeader>
-            <Table.ColumnHeader>Status</Table.ColumnHeader>
-            <Table.ColumnHeader>Created at</Table.ColumnHeader>
+            <Table.ColumnHeader>Movie title</Table.ColumnHeader>
+            <Table.ColumnHeader>Rating</Table.ColumnHeader>
+            <Table.ColumnHeader>IMDb link</Table.ColumnHeader>
+            <Table.ColumnHeader>Duration</Table.ColumnHeader>
+            <Table.ColumnHeader>Released at</Table.ColumnHeader>
             <Table.ColumnHeader>Actions</Table.ColumnHeader>
           </Table.Row>
         </Table.Header>

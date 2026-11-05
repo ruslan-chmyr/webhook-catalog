@@ -38,7 +38,7 @@ Focused unit tests protect HTTP and session invariants; integration tests cover 
 ## Demo credentials
 
 - Email: `demo@example.com`
-- Password: `WebhookApp-Demo-2026!`
+- Password: `Frame50App-Demo-2026!`
 
 ## Authentication
 

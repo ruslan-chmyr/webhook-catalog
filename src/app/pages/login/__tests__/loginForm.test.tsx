@@ -53,7 +53,7 @@ describe('login form client validation', () => {
     render(<App />);
 
     fireEvent.change(screen.getByLabelText('Password'), {
-      target: { value: 'WebhookApp-Demo-2026!' },
+      target: { value: 'Frame50App-Demo-2026!' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
 
@@ -69,7 +69,7 @@ describe('login form client validation', () => {
       target: { value: 'not-an-email' },
     });
     fireEvent.change(screen.getByLabelText('Password'), {
-      target: { value: 'WebhookApp-Demo-2026!' },
+      target: { value: 'Frame50App-Demo-2026!' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
 
@@ -104,7 +104,7 @@ describe('login form client validation', () => {
     expect(screen.getByText('Password is required.')).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Password'), {
-      target: { value: 'WebhookApp-Demo-2026!' },
+      target: { value: 'Frame50App-Demo-2026!' },
     });
     expect(screen.queryByText('Password is required.')).not.toBeInTheDocument();
   });
@@ -168,7 +168,7 @@ describe('login form client validation', () => {
       target: { value: 'demo@example.com' },
     });
     fireEvent.change(screen.getByLabelText('Password'), {
-      target: { value: 'WebhookApp-Demo-2026!' },
+      target: { value: 'Frame50App-Demo-2026!' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
 
@@ -177,7 +177,7 @@ describe('login form client validation', () => {
     expect(screen.getByRole('button', { name: 'Sign in' })).toHaveAttribute('data-loading');
 
     release.resolve();
-    expect(await screen.findByRole('heading', { name: 'Webhooks' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '50 Greatest Movies of All Time' })).toBeInTheDocument();
     expect(session.isActive()).toBe(true);
   });
 });

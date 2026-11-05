@@ -92,11 +92,15 @@ export function parseWebhook(value: unknown): Webhook {
     throw new Error('Webhooks response is invalid.');
   }
 
-  const { id, name, url, active, created_at: createdAt } = value;
+  const { id, name, url, rating, duration, active, created_at: createdAt } = value;
   if (
     typeof id !== 'string' ||
     typeof name !== 'string' ||
     typeof url !== 'string' ||
+    typeof rating !== 'number' ||
+    !Number.isFinite(rating) ||
+    typeof duration !== 'number' ||
+    !Number.isFinite(duration) ||
     typeof active !== 'boolean' ||
     typeof createdAt !== 'string'
   ) {
@@ -107,6 +111,8 @@ export function parseWebhook(value: unknown): Webhook {
     id,
     name,
     url,
+    rating,
+    duration,
     active,
     created_at: createdAt,
   };

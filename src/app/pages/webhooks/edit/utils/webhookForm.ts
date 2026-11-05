@@ -38,7 +38,7 @@ export function generalMessage(error: unknown): string | undefined {
     return undefined;
   }
   if (!(error instanceof HttpError)) {
-    return error instanceof Error ? error.message : 'Unable to save this webhook.';
+    return error instanceof Error ? error.message : 'Unable to save this movie.';
   }
   if (error.status === 422 && error.fieldErrors !== undefined && Object.keys(error.fieldErrors).length > 0) {
     return undefined;

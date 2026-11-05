@@ -26,8 +26,8 @@ export function WebhookSearch({ value, onChange }: WebhookSearchProps) {
     >
       <Input
         type="search"
-        aria-label="Search webhooks"
-        placeholder="Search by name..."
+        aria-label="Search movies"
+        placeholder="Search by title..."
         value={value}
         bg="white"
         onChange={(event) => {

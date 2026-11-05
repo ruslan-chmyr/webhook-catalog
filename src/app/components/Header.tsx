@@ -13,7 +13,7 @@ export function Header() {
         <HStack gap="2" minW="0">
           <BrandMark />
           <Heading as="h1" size="md">
-            WebhookApp
+            Frame50
           </Heading>
         </HStack>
         <HStack gap="2" flexShrink={0}>

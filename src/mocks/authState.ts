@@ -1,6 +1,6 @@
 export const SESSION_TTL_MS = 30_000;
 const DEMO_EMAIL = 'demo@example.com';
-const DEMO_PASSWORD = 'WebhookApp-Demo-2026!';
+const DEMO_PASSWORD = 'Frame50App-Demo-2026!';
 const DEMO_FIRST_NAME = 'Demo';
 const DEMO_LAST_NAME = 'User';
 const DEMO_NAME = 'Demo User';

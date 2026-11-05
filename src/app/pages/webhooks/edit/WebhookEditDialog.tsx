@@ -39,10 +39,10 @@ export function WebhookEditDialog({ webhookId, onClose }: WebhookEditDialogProps
     }
 
     return (
-      <AppDialog open={open} title="Edit Webhook" onClose={dismiss} closeDisabled={saving}>
+      <AppDialog open={open} title="Edit Movie" onClose={dismiss} closeDisabled={saving}>
         {detailPending ? (
           <Stack gap="3">
-            <VisuallyHidden>Loading webhook…</VisuallyHidden>
+            <VisuallyHidden>Loading movie…</VisuallyHidden>
             <Skeleton height="10" rounded="md" />
             <Skeleton height="10" rounded="md" />
           </Stack>
@@ -64,7 +64,7 @@ export function WebhookEditDialog({ webhookId, onClose }: WebhookEditDialogProps
   return (
     <AppDialog
       open={open}
-      title="Edit Webhook"
+      title="Edit Movie"
       onClose={dismiss}
       closeDisabled={saving}
       formId={EDIT_WEBHOOK_FORM_ID}
@@ -76,7 +76,7 @@ export function WebhookEditDialog({ webhookId, onClose }: WebhookEditDialogProps
     >
       <Stack gap="4">
         <Field.Root invalid={hasNameError}>
-          <Field.Label htmlFor="webhook-name">Name</Field.Label>
+          <Field.Label htmlFor="webhook-name">Movie title</Field.Label>
           <Input
             id="webhook-name"
             value={name}
@@ -90,7 +90,7 @@ export function WebhookEditDialog({ webhookId, onClose }: WebhookEditDialogProps
           {hasNameError ? <Field.ErrorText id="webhook-name-error">{nameError}</Field.ErrorText> : null}
         </Field.Root>
         <Field.Root invalid={hasUrlError}>
-          <Field.Label htmlFor="webhook-url">URL</Field.Label>
+          <Field.Label htmlFor="webhook-url">IMDb link</Field.Label>
           <Input
             id="webhook-url"
             value={url}

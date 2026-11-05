@@ -14,7 +14,7 @@ export function useWebhooksPage() {
   const { page, replacePage } = list;
   const last = webhooks.data?.paging.pages.last;
   const outOfRange = last !== undefined && last >= 1 && page > last;
-  const message = webhooks.error instanceof Error ? webhooks.error.message : 'Unable to load webhooks.';
+  const message = webhooks.error instanceof Error ? webhooks.error.message : 'Unable to load movies.';
   const records = webhooks.data;
   const showTable = records !== undefined && records.data.length > 0 && !outOfRange;
   const showEmpty = records !== undefined && records.data.length === 0 && !outOfRange && !webhooks.isError;

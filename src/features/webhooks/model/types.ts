@@ -2,6 +2,8 @@ export type Webhook = {
   id: string;
   name: string;
   url: string;
+  rating: number;
+  duration: number;
   active: boolean;
   created_at: string;
 };

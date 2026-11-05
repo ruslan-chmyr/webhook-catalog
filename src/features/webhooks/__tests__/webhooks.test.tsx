@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { App } from '@/app/App';
 import { http as transport, queryClient, session } from '@/app/composition';
 import { login, logout } from '@/features/auth/api/authApi';
@@ -17,7 +17,7 @@ const listParams = {
 
 const credentials = {
   email: 'demo@example.com',
-  password: 'WebhookApp-Demo-2026!',
+  password: 'Frame50App-Demo-2026!',
 };
 
 function pathnameIs(pathname: string): (args: { request: Request }) => boolean {
@@ -65,22 +65,25 @@ describe('webhooks', () => {
     const list = await getWebhooks(listParams);
 
     expect(list.data.map((webhook) => webhook.name)).toEqual([
-      'Webhook 01',
-      'Webhook 02',
-      'Webhook 03',
-      'Webhook 04',
-      'Webhook 05',
-      'Webhook 06',
-      'Webhook 07',
-      'Webhook 08',
-      'Webhook 09',
-      'Webhook 10',
+      'The Shawshank Redemption',
+      'The Godfather',
+      '12 Angry Men',
+      "Schindler's List",
+      'The Lord of the Rings: The Fellowship of the Ring',
+      'The Good, the Bad and the Ugly',
+      'Pulp Fiction',
+      "One Flew Over the Cuckoo's Nest",
+      'Goodfellas',
+      'The Matrix',
     ]);
     expect(list.data[0]).toMatchObject({
-      id: 'webhook-01',
-      active: true,
+      id: 'the-shawshank-redemption',
+      active: false,
+      rating: 9.3,
+      duration: 142,
+      created_at: '1994-09-23T12:00:00.000Z',
+      url: 'https://www.imdb.com/find/?q=The%20Shawshank%20Redemption',
     });
-    expect(list.data[0]?.url.length).toBeGreaterThan(80);
   });
 
   it('returns the documented pagination metadata', async () => {
@@ -89,18 +92,18 @@ describe('webhooks', () => {
     const list = await getWebhooks(listParams);
 
     expect(list.paging).toEqual({
-      pages: { current: 1, last: 3 },
-      results: { total: 28, limitation: 10 },
+      pages: { current: 1, last: 5 },
+      results: { total: 50, limitation: 10 },
     });
   });
 
-  it('searches webhook names and ignores the destination URL', async () => {
+  it('searches movie titles and ignores the IMDb URL', async () => {
     await login(credentials);
 
     const byUrlFragment = await getWebhooks({
       page: 1,
       limit: 10,
-      search: 'destination',
+      search: 'imdb',
     });
     expect(byUrlFragment.data).toEqual([]);
     expect(byUrlFragment.paging.results.total).toBe(0);
@@ -108,9 +111,9 @@ describe('webhooks', () => {
     const byName = await getWebhooks({
       page: 1,
       limit: 10,
-      search: 'Webhook 01',
+      search: 'Citizen Kane',
     });
-    expect(byName.data.map((webhook) => webhook.id)).toEqual(['webhook-01']);
+    expect(byName.data.map((webhook) => webhook.id)).toEqual(['citizen-kane']);
   });
 
   it('returns HTTP 401 when the mock session is missing', async () => {
@@ -129,13 +132,49 @@ describe('webhooks', () => {
     render(<App />);
     await signInThroughForm();
 
-    expect(await screen.findByRole('heading', { name: 'Webhooks' })).toBeInTheDocument();
-    expect(await screen.findByRole('cell', { name: 'Webhook 01' })).toBeInTheDocument();
-    expect(screen.getByRole('cell', { name: 'Webhook 10' })).toBeInTheDocument();
-    expect(screen.queryByRole('cell', { name: 'Webhook 11' })).not.toBeInTheDocument();
-    expect(screen.getAllByText('Active').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Inactive').length).toBeGreaterThan(0);
-    expect(screen.getByText(/destination\/destination/)).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '50 Greatest Movies of All Time' })).toBeInTheDocument();
+    expect(await screen.findByRole('cell', { name: 'The Shawshank Redemption' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'The Matrix' })).toBeInTheDocument();
+    expect(screen.queryByRole('cell', { name: 'Star Wars' })).not.toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: '2h 22m' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'Sep 23, 1994' })).toBeInTheDocument();
+    expect(screen.getAllByRole('columnheader').map((header) => header.textContent)).toEqual([
+      'Movie title',
+      'Rating',
+      'IMDb link',
+      'Duration',
+      'Released at',
+      'Actions',
+    ]);
+    expect(screen.getByRole('cell', { name: '9.2' })).toBeInTheDocument();
+    const link = screen.getByTitle('https://www.imdb.com/find/?q=The%20Shawshank%20Redemption');
+    expect(link.textContent ?? '').toMatch(/…$/);
+    expect(link.textContent ?? '').not.toBe('https://www.imdb.com/find/?q=The%20Shawshank%20Redemption');
+  });
+
+  it('copies the full IMDb link from the shortened cell', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    const clipboard = navigator.clipboard;
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+
+    try {
+      render(<App />);
+      await signInThroughForm();
+      fireEvent.click(await screen.findByRole('button', { name: 'Copy IMDb link for The Shawshank Redemption' }));
+
+      await waitFor(() => {
+        expect(writeText).toHaveBeenCalledWith('https://www.imdb.com/find/?q=The%20Shawshank%20Redemption');
+      });
+      expect(screen.getByRole('button', { name: 'Copied IMDb link for The Shawshank Redemption' })).toBeInTheDocument();
+    } finally {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: clipboard,
+      });
+    }
   });
 
   it('shows a loading state until the list arrives', async () => {
@@ -151,6 +190,8 @@ describe('webhooks', () => {
               id: 'webhook-01',
               name: 'Webhook 01',
               url: 'https://example.com/hooks/webhook-01',
+              rating: 8,
+              duration: 90,
               active: true,
               created_at: '2024-01-01T12:00:00.000Z',
             },
@@ -166,18 +207,18 @@ describe('webhooks', () => {
     render(<App />);
     await signInThroughForm();
 
-    expect(await screen.findByText('Loading webhooks…')).toBeInTheDocument();
-    expect(screen.queryByLabelText('Refreshing webhooks')).not.toBeInTheDocument();
+    expect(await screen.findByText('Loading movies…')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Refreshing movies')).not.toBeInTheDocument();
     await arrived.promise;
     release.resolve();
     expect(await screen.findByRole('cell', { name: 'Webhook 01' })).toBeInTheDocument();
-    expect(screen.queryByText('Loading webhooks…')).not.toBeInTheDocument();
+    expect(screen.queryByText('Loading movies…')).not.toBeInTheDocument();
   });
 
   it('keeps the table visible during a background refetch', async () => {
     render(<App />);
     await signInThroughForm();
-    expect(await screen.findByRole('cell', { name: 'Webhook 01' })).toBeInTheDocument();
+    expect(await screen.findByRole('cell', { name: 'The Shawshank Redemption' })).toBeInTheDocument();
 
     const release = createDeferred();
     const arrived = createDeferred();
@@ -191,6 +232,8 @@ describe('webhooks', () => {
               id: 'webhook-01',
               name: 'Webhook 01',
               url: 'https://example.com/hooks/webhook-01',
+              rating: 8,
+              duration: 90,
               active: true,
               created_at: '2024-01-01T12:00:00.000Z',
             },
@@ -206,13 +249,13 @@ describe('webhooks', () => {
     void queryClient.invalidateQueries({ queryKey: webhooksQueryPrefix });
     await arrived.promise;
 
-    expect(screen.getByRole('cell', { name: 'Webhook 01' })).toBeInTheDocument();
-    expect(screen.queryByText('Loading webhooks…')).not.toBeInTheDocument();
-    expect(await screen.findByLabelText('Refreshing webhooks')).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'The Shawshank Redemption' })).toBeInTheDocument();
+    expect(screen.queryByText('Loading movies…')).not.toBeInTheDocument();
+    expect(await screen.findByLabelText('Refreshing movies')).toBeInTheDocument();
 
     release.resolve();
     await waitFor(() => {
-      expect(screen.queryByLabelText('Refreshing webhooks')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Refreshing movies')).not.toBeInTheDocument();
     });
     expect(screen.getByRole('cell', { name: 'Webhook 01' })).toBeInTheDocument();
   });
@@ -233,7 +276,7 @@ describe('webhooks', () => {
     render(<App />);
     await signInThroughForm();
 
-    expect(await screen.findByText('No webhooks found.')).toBeInTheDocument();
+    expect(await screen.findByText('No movies found.')).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
@@ -268,7 +311,7 @@ describe('webhooks', () => {
   it('removes cached webhooks when the session ends', async () => {
     render(<App />);
     await signInThroughForm();
-    expect(await screen.findByRole('cell', { name: 'Webhook 01' })).toBeInTheDocument();
+    expect(await screen.findByRole('cell', { name: 'The Shawshank Redemption' })).toBeInTheDocument();
     expect(queryClient.getQueryData(webhooksQueryKey(listParams))).toBeDefined();
 
     await logout();

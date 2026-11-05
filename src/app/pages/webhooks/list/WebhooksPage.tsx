@@ -44,15 +44,15 @@ export function WebhooksPage() {
       <Stack gap="1">
         <HStack gap="2" align="center">
           <Heading as="h2" size="lg">
-            Webhooks
+            50 Greatest Movies of All Time
           </Heading>
           {showRefetchIndicator ? (
-            <Box role="status" aria-label="Refreshing webhooks">
+            <Box role="status" aria-label="Refreshing movies">
               <Spinner size="sm" color="gray.500" />
             </Box>
           ) : null}
         </HStack>
-        <Text color="gray.600">Manage your webhooks and receive event notifications</Text>
+        <Text color="gray.600">A curated collection of cinema's most iconic films.</Text>
       </Stack>
       <WebhookSearch value={list.input} onChange={list.setInput} />
       <WebhookListSkeleton visible={showSkeleton} />

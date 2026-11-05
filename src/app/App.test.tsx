@@ -6,7 +6,7 @@ describe('App', () => {
   it('shows the login form before a session exists', async () => {
     render(<App />);
 
-    expect(await screen.findByRole('heading', { name: 'WebhookApp' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: 'Frame50' })).toBeInTheDocument();
     expect(screen.getByLabelText('Email')).toBeInTheDocument();
     expect(screen.getByLabelText('Password')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();

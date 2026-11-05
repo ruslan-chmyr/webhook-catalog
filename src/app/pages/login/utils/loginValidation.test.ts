@@ -17,7 +17,7 @@ describe('validateLoginForm', () => {
     expect(
       validateLoginForm({
         email: 'not-an-email',
-        password: 'WebhookApp-Demo-2026!',
+        password: 'Frame50App-Demo-2026!',
       }),
     ).toEqual({
       email: ['Enter a valid email address.'],
@@ -28,7 +28,7 @@ describe('validateLoginForm', () => {
     expect(
       validateLoginForm({
         email: 'demo@example.com',
-        password: 'WebhookApp-Demo-2026!',
+        password: 'Frame50App-Demo-2026!',
       }),
     ).toBeUndefined();
   });

@@ -90,7 +90,7 @@ export function useWebhookEditDialog({ webhookId, onClose }: UseWebhookEditDialo
     generalError,
     detailPending: webhookId !== null && detail.isPending,
     detailError: webhookId !== null && detail.isError,
-    detailErrorMessage: detail.error instanceof Error ? detail.error.message : 'Unable to load this webhook.',
+    detailErrorMessage: detail.error instanceof Error ? detail.error.message : 'Unable to load this movie.',
     setName,
     setUrl,
     dismiss,

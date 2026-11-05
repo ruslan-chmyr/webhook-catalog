@@ -56,7 +56,7 @@ function createDeferred(): Deferred {
 }
 
 async function signIn(): Promise<void> {
-  await login({ email: demoUser.email, password: 'WebhookApp-Demo-2026!' });
+  await login({ email: demoUser.email, password: 'Frame50App-Demo-2026!' });
 }
 
 describe('authentication flow', () => {
@@ -226,7 +226,7 @@ describe('authentication flow', () => {
   it('returns to login when revoke fails', async () => {
     render(<App />);
     await signInThroughForm();
-    expect(await screen.findByRole('heading', { name: 'Webhooks' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '50 Greatest Movies of All Time' })).toBeInTheDocument();
 
     server.use(
       http.post(pathnameIs('/auth/token/revoke'), () => {
@@ -330,11 +330,11 @@ describe('authentication flow', () => {
     expect(session.isActive()).toBe(false);
 
     fireEvent.change(screen.getByLabelText('Password'), {
-      target: { value: 'WebhookApp-Demo-2026!' },
+      target: { value: 'Frame50App-Demo-2026!' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
 
-    expect(await screen.findByRole('heading', { name: 'Webhooks' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '50 Greatest Movies of All Time' })).toBeInTheDocument();
     expect(await screen.findByText(demoUser.email)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Log out' }));
@@ -471,7 +471,7 @@ describe('authentication flow', () => {
     render(<App />);
     await signInThroughForm();
 
-    expect(await screen.findByRole('heading', { name: 'Webhooks' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '50 Greatest Movies of All Time' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/');
     expect(router.state.location.search).toBe('');
   });
@@ -487,10 +487,10 @@ describe('authentication flow', () => {
 
     await signInThroughForm();
 
-    expect(await screen.findByRole('heading', { name: 'Webhooks' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '50 Greatest Movies of All Time' })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/');
     expect(router.state.location.search).toBe('?page=2&search=hook');
-    expect(await screen.findByRole('searchbox', { name: 'Search webhooks' })).toHaveValue('hook');
+    expect(await screen.findByRole('searchbox', { name: 'Search movies' })).toHaveValue('hook');
   });
 });
 
@@ -499,7 +499,7 @@ async function signInThroughForm(): Promise<void> {
     target: { value: demoUser.email },
   });
   fireEvent.change(screen.getByLabelText('Password'), {
-    target: { value: 'WebhookApp-Demo-2026!' },
+    target: { value: 'Frame50App-Demo-2026!' },
   });
   fireEvent.click(screen.getByRole('button', { name: 'Sign in' }));
 }
