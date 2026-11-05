@@ -5,3 +5,13 @@
 body {
   margin: 0;
 }
+
+.movie-poster-fade {
+  transition: opacity 240ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .movie-poster-fade {
+    transition: none;
+  }
+}

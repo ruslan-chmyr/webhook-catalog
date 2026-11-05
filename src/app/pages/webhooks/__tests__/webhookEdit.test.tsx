@@ -10,6 +10,7 @@ import { updateWebhook as persistWebhook } from '@/mocks/webhooks';
 import { HttpError } from '@/shared/api/errors';
 import { getWebhook, getWebhooks, updateWebhook } from '@/features/webhooks/api/webhooksApi';
 import { webhookQueryKey } from '@/features/webhooks/model/queryKeys';
+import { CATALOG_VIEW_STORAGE_KEY } from '../list/hooks/useCatalogViewMode';
 
 const credentials = {
   email: 'demo@example.com',
@@ -45,6 +46,7 @@ function createDeferred(): Deferred {
 }
 
 async function openWebhooks(): Promise<void> {
+  localStorage.setItem(CATALOG_VIEW_STORAGE_KEY, 'table');
   await login(credentials);
   render(<App />);
 }
@@ -115,6 +117,7 @@ describe('webhook detail and editing', () => {
       active: before.active,
       rating: before.rating,
       duration: before.duration,
+      poster_path: before.poster_path,
       created_at: before.created_at,
       name: 'Updated webhook',
       url: 'https://example.com/webhook',

@@ -2,16 +2,17 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 import { App } from '@/app/App';
+import { CATALOG_VIEW_STORAGE_KEY } from '@/app/pages/webhooks/list/hooks/useCatalogViewMode';
 import { http as transport, queryClient, session } from '@/app/composition';
 import { login, logout } from '@/features/auth/api/authApi';
 import { server } from '@/mocks/server';
 import { HttpError } from '@/shared/api/errors';
-import { getWebhooks } from '../api/webhooksApi';
+import { getWebhooks, parseWebhook } from '../api/webhooksApi';
 import { webhooksQueryKey, webhooksQueryPrefix } from '../model/queryKeys';
 
 const listParams = {
   page: 1,
-  limit: 10,
+  limit: 9,
   search: '',
 } as const;
 
@@ -48,6 +49,10 @@ function createDeferred(): Deferred {
   };
 }
 
+function preferTableCatalogView(): void {
+  localStorage.setItem(CATALOG_VIEW_STORAGE_KEY, 'table');
+}
+
 async function signInThroughForm(): Promise<void> {
   fireEvent.change(screen.getByLabelText('Email'), {
     target: { value: credentials.email },
@@ -59,7 +64,7 @@ async function signInThroughForm(): Promise<void> {
 }
 
 describe('webhooks', () => {
-  it('returns the first 10 records for an authenticated request', async () => {
+  it('returns the first page of nine records for an authenticated request', async () => {
     await login(credentials);
 
     const list = await getWebhooks(listParams);
@@ -74,13 +79,13 @@ describe('webhooks', () => {
       'Pulp Fiction',
       "One Flew Over the Cuckoo's Nest",
       'Goodfellas',
-      'The Matrix',
     ]);
     expect(list.data[0]).toMatchObject({
       id: 'the-shawshank-redemption',
       active: false,
       rating: 9.3,
       duration: 142,
+      poster_path: '/9cqNxx0GxF0bflZmeSMuL5tnGzr.jpg',
       created_at: '1994-09-23T12:00:00.000Z',
       url: 'https://www.imdb.com/find/?q=The%20Shawshank%20Redemption',
     });
@@ -92,8 +97,8 @@ describe('webhooks', () => {
     const list = await getWebhooks(listParams);
 
     expect(list.paging).toEqual({
-      pages: { current: 1, last: 5 },
-      results: { total: 50, limitation: 10 },
+      pages: { current: 1, last: 6 },
+      results: { total: 50, limitation: 9 },
     });
   });
 
@@ -129,13 +134,14 @@ describe('webhooks', () => {
   });
 
   it('renders the first page of webhooks', async () => {
+    preferTableCatalogView();
     render(<App />);
     await signInThroughForm();
 
     expect(await screen.findByRole('heading', { name: '50 Greatest Movies of All Time' })).toBeInTheDocument();
     expect(await screen.findByRole('cell', { name: 'The Shawshank Redemption' })).toBeInTheDocument();
-    expect(screen.getByRole('cell', { name: 'The Matrix' })).toBeInTheDocument();
-    expect(screen.queryByRole('cell', { name: 'Star Wars' })).not.toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'Goodfellas' })).toBeInTheDocument();
+    expect(screen.queryByRole('cell', { name: 'The Matrix' })).not.toBeInTheDocument();
     expect(screen.getByRole('cell', { name: '2h 22m' })).toBeInTheDocument();
     expect(screen.getByRole('cell', { name: 'Sep 23, 1994' })).toBeInTheDocument();
     expect(screen.getAllByRole('columnheader').map((header) => header.textContent)).toEqual([
@@ -161,7 +167,8 @@ describe('webhooks', () => {
     });
 
     try {
-      render(<App />);
+      preferTableCatalogView();
+    render(<App />);
       await signInThroughForm();
       fireEvent.click(await screen.findByRole('button', { name: 'Copy IMDb link for The Shawshank Redemption' }));
 
@@ -204,6 +211,7 @@ describe('webhooks', () => {
       }),
     );
 
+    preferTableCatalogView();
     render(<App />);
     await signInThroughForm();
 
@@ -216,6 +224,7 @@ describe('webhooks', () => {
   });
 
   it('keeps the table visible during a background refetch', async () => {
+    preferTableCatalogView();
     render(<App />);
     await signInThroughForm();
     expect(await screen.findByRole('cell', { name: 'The Shawshank Redemption' })).toBeInTheDocument();
@@ -273,6 +282,7 @@ describe('webhooks', () => {
       }),
     );
 
+    preferTableCatalogView();
     render(<App />);
     await signInThroughForm();
 
@@ -297,6 +307,7 @@ describe('webhooks', () => {
       }),
     );
 
+    preferTableCatalogView();
     render(<App />);
     await signInThroughForm();
 
@@ -309,6 +320,7 @@ describe('webhooks', () => {
   });
 
   it('removes cached webhooks when the session ends', async () => {
+    preferTableCatalogView();
     render(<App />);
     await signInThroughForm();
     expect(await screen.findByRole('cell', { name: 'The Shawshank Redemption' })).toBeInTheDocument();
@@ -319,5 +331,38 @@ describe('webhooks', () => {
     expect(session.isActive()).toBe(false);
     expect(queryClient.getQueryData(webhooksQueryKey(listParams))).toBeUndefined();
     expect(await screen.findByRole('button', { name: 'Sign in' })).toBeInTheDocument();
+  });
+
+  it('parses a missing or null poster path', () => {
+    const record = {
+      id: 'citizen-kane',
+      name: 'Citizen Kane',
+      url: 'https://example.com/kane',
+      rating: 8.3,
+      duration: 119,
+      active: true,
+      created_at: '1941-05-01T12:00:00.000Z',
+    };
+
+    expect(parseWebhook(record).poster_path).toBeNull();
+    expect(parseWebhook({ ...record, poster_path: null }).poster_path).toBeNull();
+    expect(parseWebhook({ ...record, poster_path: '/sav0jxhqiH0bPr2vZFU0Kjt2nZL.jpg' }).poster_path).toBe(
+      '/sav0jxhqiH0bPr2vZFU0Kjt2nZL.jpg',
+    );
+  });
+
+  it('rejects an invalid poster path', () => {
+    const record = {
+      id: 'citizen-kane',
+      name: 'Citizen Kane',
+      url: 'https://example.com/kane',
+      rating: 8.3,
+      duration: 119,
+      active: true,
+      created_at: '1941-05-01T12:00:00.000Z',
+    };
+
+    expect(() => parseWebhook({ ...record, poster_path: 'poster.jpg' })).toThrow('Webhooks response is invalid.');
+    expect(() => parseWebhook({ ...record, poster_path: 1 })).toThrow('Webhooks response is invalid.');
   });
 });

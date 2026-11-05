@@ -29,7 +29,12 @@ export function WebhookSearch({ value, onChange }: WebhookSearchProps) {
         aria-label="Search movies"
         placeholder="Search by title..."
         value={value}
+        size="md"
         bg="white"
+        borderColor="gray.200"
+        rounded="lg"
+        ps="10"
+        _focusVisible={{ borderColor: 'blue.400', boxShadow: '0 0 0 1px var(--chakra-colors-blue-400)' }}
         onChange={(event) => {
           onChange(event.target.value);
         }}
