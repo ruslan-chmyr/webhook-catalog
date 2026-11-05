@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it, vi } from 'vitest';
 import { App } from '@/app/App';
+import { CATALOG_VIEW_STORAGE_KEY } from '@/app/pages/webhooks/list/hooks/useCatalogViewMode';
 import { http as transport, queryClient, session } from '@/app/composition';
 import { login, logout } from '@/features/auth/api/authApi';
 import { server } from '@/mocks/server';
@@ -46,6 +47,10 @@ function createDeferred(): Deferred {
       resolveDeferred();
     },
   };
+}
+
+function preferTableCatalogView(): void {
+  localStorage.setItem(CATALOG_VIEW_STORAGE_KEY, 'table');
 }
 
 async function signInThroughForm(): Promise<void> {
@@ -129,6 +134,7 @@ describe('webhooks', () => {
   });
 
   it('renders the first page of webhooks', async () => {
+    preferTableCatalogView();
     render(<App />);
     await signInThroughForm();
 
@@ -161,7 +167,8 @@ describe('webhooks', () => {
     });
 
     try {
-      render(<App />);
+      preferTableCatalogView();
+    render(<App />);
       await signInThroughForm();
       fireEvent.click(await screen.findByRole('button', { name: 'Copy IMDb link for The Shawshank Redemption' }));
 
@@ -204,6 +211,7 @@ describe('webhooks', () => {
       }),
     );
 
+    preferTableCatalogView();
     render(<App />);
     await signInThroughForm();
 
@@ -216,6 +224,7 @@ describe('webhooks', () => {
   });
 
   it('keeps the table visible during a background refetch', async () => {
+    preferTableCatalogView();
     render(<App />);
     await signInThroughForm();
     expect(await screen.findByRole('cell', { name: 'The Shawshank Redemption' })).toBeInTheDocument();
@@ -273,6 +282,7 @@ describe('webhooks', () => {
       }),
     );
 
+    preferTableCatalogView();
     render(<App />);
     await signInThroughForm();
 
@@ -297,6 +307,7 @@ describe('webhooks', () => {
       }),
     );
 
+    preferTableCatalogView();
     render(<App />);
     await signInThroughForm();
 
@@ -309,6 +320,7 @@ describe('webhooks', () => {
   });
 
   it('removes cached webhooks when the session ends', async () => {
+    preferTableCatalogView();
     render(<App />);
     await signInThroughForm();
     expect(await screen.findByRole('cell', { name: 'The Shawshank Redemption' })).toBeInTheDocument();

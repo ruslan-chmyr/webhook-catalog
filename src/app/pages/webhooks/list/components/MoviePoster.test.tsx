@@ -1,6 +1,7 @@
 import { ChakraProvider, defaultSystem } from '@chakra-ui/react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
+import { POSTER_CARD_SIZES } from '@/features/webhooks/utils/posterUrl';
 import { MoviePoster, type PosterPriority } from './MoviePoster';
 
 const citizenKanePoster = '/sav0jxhqiH0bPr2vZFU0Kjt2nZL.jpg';
@@ -31,6 +32,7 @@ describe('MoviePoster', () => {
     expect(image).toHaveAttribute('loading', 'lazy');
     expect(image).toHaveAttribute('decoding', 'async');
     expect(image.getAttribute('srcset')).toContain('w342');
+    expect(image).toHaveAttribute('sizes', POSTER_CARD_SIZES);
     expect(screen.queryByText('Poster unavailable')).not.toBeInTheDocument();
 
     fireEvent.load(image);
@@ -85,5 +87,79 @@ describe('MoviePoster', () => {
     expect(nextImage).toHaveStyle({ opacity: '0' });
     expect(nextImage).toHaveAttribute('src', expect.stringContaining(godfatherPoster));
     expect(screen.queryByRole('img', { name: 'Poster for Citizen Kane' })).not.toBeInTheDocument();
+
+    fireEvent.load(nextImage);
+    expect(screen.getByTestId('poster-placeholder')).toHaveAttribute('data-visible', 'false');
+    expect(nextImage).toHaveStyle({ opacity: '1' });
+  });
+
+  it('loads a new poster after the previous path failed', () => {
+    const view = renderPoster(citizenKanePoster);
+    fireEvent.error(posterImage());
+    expect(screen.getByText('Poster unavailable')).toBeInTheDocument();
+
+    view.rerender(
+      <ChakraProvider value={defaultSystem}>
+        <MoviePoster posterPath={godfatherPoster} title="The Godfather" priority="lazy" />
+      </ChakraProvider>,
+    );
+
+    const nextImage = screen.getByRole('img', { name: 'Poster for The Godfather' });
+    expect(screen.getByTestId('poster-placeholder')).toHaveAttribute('data-visible', 'true');
+    fireEvent.load(nextImage);
+    expect(screen.getByTestId('poster-placeholder')).toHaveAttribute('data-visible', 'false');
+  });
+
+  it('retries a poster path after switching away from a failed load', () => {
+    const view = renderPoster(citizenKanePoster);
+    fireEvent.error(posterImage());
+
+    view.rerender(
+      <ChakraProvider value={defaultSystem}>
+        <MoviePoster posterPath={godfatherPoster} title="The Godfather" priority="lazy" />
+      </ChakraProvider>,
+    );
+    fireEvent.load(screen.getByRole('img', { name: 'Poster for The Godfather' }));
+
+    view.rerender(
+      <ChakraProvider value={defaultSystem}>
+        <MoviePoster posterPath={citizenKanePoster} title="Citizen Kane" priority="lazy" />
+      </ChakraProvider>,
+    );
+
+    const retry = screen.getByRole('img', { name: 'Poster for Citizen Kane' });
+    expect(screen.getByTestId('poster-placeholder')).toHaveAttribute('data-visible', 'true');
+    fireEvent.load(retry);
+    expect(screen.getByTestId('poster-placeholder')).toHaveAttribute('data-visible', 'false');
+  });
+
+  it('drops the image when the poster path becomes null', () => {
+    const view = renderPoster(citizenKanePoster);
+    fireEvent.load(posterImage());
+
+    view.rerender(
+      <ChakraProvider value={defaultSystem}>
+        <MoviePoster posterPath={null} title="Citizen Kane" priority="lazy" />
+      </ChakraProvider>,
+    );
+
+    expect(screen.getByText('Poster unavailable')).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: 'Poster for Citizen Kane' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('poster-placeholder')).not.toBeInTheDocument();
+  });
+
+  it('loads from null when a poster path appears', () => {
+    const view = renderPoster(null);
+
+    view.rerender(
+      <ChakraProvider value={defaultSystem}>
+        <MoviePoster posterPath={citizenKanePoster} title="Citizen Kane" priority="lazy" />
+      </ChakraProvider>,
+    );
+
+    const image = posterImage();
+    expect(screen.getByTestId('poster-placeholder')).toHaveAttribute('data-visible', 'true');
+    fireEvent.load(image);
+    expect(screen.getByTestId('poster-placeholder')).toHaveAttribute('data-visible', 'false');
   });
 });

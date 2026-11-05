@@ -49,20 +49,25 @@ async function openWebhooks(path = '/'): Promise<void> {
 }
 
 describe('catalog view', () => {
-  it('defaults to the table', async () => {
+  it('defaults to the grid', async () => {
     await openWebhooks();
 
-    expect(await screen.findByRole('columnheader', { name: 'Movie title' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Table' })).toHaveAttribute('aria-pressed', 'true');
-    expect(screen.queryByRole('article')).not.toBeInTheDocument();
+    expect(await screen.findByRole('article', { name: 'The Shawshank Redemption' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Grid' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.queryByRole('columnheader', { name: 'Movie title' })).not.toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'TMDB' })).toBeInTheDocument();
     expect(screen.getByText(/not endorsed, certified, or otherwise approved by TMDB/)).toBeInTheDocument();
   });
 
-  it('switches to the grid and stores the preference', async () => {
+  it('switches to the table and stores the preference', async () => {
     await openWebhooks();
-    fireEvent.click(await screen.findByRole('button', { name: 'Grid' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Table' }));
 
+    expect(await screen.findByRole('columnheader', { name: 'Movie title' })).toBeInTheDocument();
+    expect(localStorage.getItem(CATALOG_VIEW_STORAGE_KEY)).toBe('table');
+    expect(screen.queryByRole('article')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Grid' }));
     const card = await screen.findByRole('article', { name: 'The Shawshank Redemption' });
     expect(screen.getAllByRole('article')).toHaveLength(9);
     expect(within(card).getByText('9.3')).toBeInTheDocument();
@@ -87,7 +92,7 @@ describe('catalog view', () => {
     expect(later).toHaveAttribute('loading', 'lazy');
     expect(later).not.toHaveAttribute('fetchpriority');
 
-    const link = within(card).getByRole('link', { name: 'IMDb page for The Shawshank Redemption' });
+    const link = within(card).getByRole('link', { name: 'Search IMDb for The Shawshank Redemption' });
     expect(link).toHaveAttribute('href', 'https://www.imdb.com/find/?q=The%20Shawshank%20Redemption');
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
@@ -104,31 +109,31 @@ describe('catalog view', () => {
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
-  it('falls back to the table when the stored preference is invalid', async () => {
+  it('falls back to the grid when the stored preference is invalid', async () => {
     localStorage.setItem(CATALOG_VIEW_STORAGE_KEY, 'cards');
     await openWebhooks();
 
-    expect(await screen.findByRole('columnheader', { name: 'Movie title' })).toBeInTheDocument();
-    expect(screen.queryByRole('article')).not.toBeInTheDocument();
+    expect(await screen.findByRole('article', { name: 'The Shawshank Redemption' })).toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Movie title' })).not.toBeInTheDocument();
     expect(localStorage.getItem(CATALOG_VIEW_STORAGE_KEY)).toBe('cards');
   });
 
   it('keeps the current search and page without requesting the catalog again', async () => {
     const requests = installWebhookProbe();
     await openWebhooks('/?page=2&search=the');
-    expect(await screen.findByRole('cell', { name: 'Gone with the Wind' })).toBeInTheDocument();
-    const before = requests.length;
-
-    fireEvent.click(screen.getByRole('button', { name: 'Grid' }));
     expect(await screen.findByRole('article', { name: 'Gone with the Wind' })).toBeInTheDocument();
-    expect(requests).toHaveLength(before);
-    expect(router.state.location.search).toBe('?page=2&search=the');
-    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    const before = requests.length;
 
     fireEvent.click(screen.getByRole('button', { name: 'Table' }));
     expect(await screen.findByRole('cell', { name: 'Gone with the Wind' })).toBeInTheDocument();
     expect(requests).toHaveLength(before);
     expect(router.state.location.search).toBe('?page=2&search=the');
     expect(screen.queryByRole('article')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Grid' }));
+    expect(await screen.findByRole('article', { name: 'Gone with the Wind' })).toBeInTheDocument();
+    expect(requests).toHaveLength(before);
+    expect(router.state.location.search).toBe('?page=2&search=the');
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 });

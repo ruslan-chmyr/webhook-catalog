@@ -27,11 +27,6 @@ export function MoviePoster({
   sizes = POSTER_CARD_SIZES,
   roundedStart = false,
 }: MoviePosterProps) {
-  const [failedPath, setFailedPath] = useState<string | null>(null);
-  const [loadedPath, setLoadedPath] = useState<string | null>(null);
-  const availablePath = posterPath !== null && failedPath !== posterPath ? posterPath : null;
-  const loaded = availablePath !== null && loadedPath === availablePath;
-
   return (
     <Box
       position="relative"
@@ -42,57 +37,88 @@ export function MoviePoster({
       style={{ aspectRatio: '2 / 3' }}
       roundedStart={roundedStart ? 'md' : undefined}
     >
-      {availablePath !== null ? (
-        <>
-          <Box
-            aria-hidden="true"
-            data-testid="poster-placeholder"
-            data-visible={loaded ? 'false' : 'true'}
-            className="movie-poster-fade"
-            position="absolute"
-            inset="0"
-            style={{
-              background: placeholderBackground,
-              filter: 'blur(14px)',
-              transform: 'scale(1.12)',
-              opacity: loaded ? 0 : 1,
-            }}
-          />
-          <img
-            key={availablePath}
-            alt={`Poster for ${title}`}
-            src={posterUrl(availablePath, POSTER_DEFAULT_WIDTH)}
-            srcSet={posterSrcSet(availablePath)}
-            sizes={sizes}
-            width={342}
-            height={513}
-            decoding="async"
-            loading={priority === 'lazy' ? 'lazy' : 'eager'}
-            {...(priority === 'high' ? { fetchPriority: 'high' as const } : {})}
-            className="movie-poster-fade"
-            onLoad={() => {
-              setLoadedPath(availablePath);
-            }}
-            onError={() => {
-              setFailedPath(availablePath);
-            }}
-            style={{
-              position: 'absolute',
-              inset: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover',
-              opacity: loaded ? 1 : 0,
-            }}
-          />
-        </>
+      {posterPath === null ? (
+        <PosterUnavailable />
       ) : (
-        <Flex position="absolute" inset="0" align="center" justify="center" px="2" textAlign="center">
-          <Text fontSize="xs" color="gray.600">
-            Poster unavailable
-          </Text>
-        </Flex>
+        <PosterImage
+          key={posterPath}
+          posterPath={posterPath}
+          title={title}
+          priority={priority}
+          sizes={sizes}
+        />
       )}
     </Box>
+  );
+}
+
+type PosterImageProps = {
+  posterPath: string;
+  title: string;
+  priority: PosterPriority;
+  sizes: string;
+};
+
+function PosterImage({ posterPath, title, priority, sizes }: PosterImageProps) {
+  const [loaded, setLoaded] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  if (failed) {
+    return <PosterUnavailable />;
+  }
+
+  return (
+    <>
+      <Box
+        aria-hidden="true"
+        data-testid="poster-placeholder"
+        data-visible={loaded ? 'false' : 'true'}
+        className="movie-poster-fade"
+        position="absolute"
+        inset="0"
+        style={{
+          background: placeholderBackground,
+          filter: 'blur(14px)',
+          transform: 'scale(1.12)',
+          opacity: loaded ? 0 : 1,
+        }}
+      />
+      <img
+        alt={`Poster for ${title}`}
+        src={posterUrl(posterPath, POSTER_DEFAULT_WIDTH)}
+        srcSet={posterSrcSet(posterPath)}
+        sizes={sizes}
+        width={342}
+        height={513}
+        decoding="async"
+        loading={priority === 'lazy' ? 'lazy' : 'eager'}
+        {...(priority === 'high' ? { fetchPriority: 'high' as const } : {})}
+        className="movie-poster-fade"
+        onLoad={() => {
+          setLoaded(true);
+        }}
+        onError={() => {
+          setFailed(true);
+        }}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          opacity: loaded ? 1 : 0,
+        }}
+      />
+    </>
+  );
+}
+
+function PosterUnavailable() {
+  return (
+    <Flex position="absolute" inset="0" align="center" justify="center" px="2" textAlign="center">
+      <Text fontSize="xs" color="gray.600">
+        Poster unavailable
+      </Text>
+    </Flex>
   );
 }

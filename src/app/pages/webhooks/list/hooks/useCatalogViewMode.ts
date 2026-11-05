@@ -6,9 +6,9 @@ export type CatalogViewMode = 'table' | 'grid';
 
 export function readCatalogViewMode(): CatalogViewMode {
   try {
-    return localStorage.getItem(CATALOG_VIEW_STORAGE_KEY) === 'grid' ? 'grid' : 'table';
+    return localStorage.getItem(CATALOG_VIEW_STORAGE_KEY) === 'table' ? 'table' : 'grid';
   } catch {
-    return 'table';
+    return 'grid';
   }
 }
 

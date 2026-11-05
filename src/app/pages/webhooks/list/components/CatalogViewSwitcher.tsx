@@ -21,15 +21,6 @@ export function CatalogViewSwitcher({ mode, onChange }: CatalogViewSwitcherProps
       rounded="lg"
     >
       <ViewButton
-        label="Table"
-        pressed={mode === 'table'}
-        onClick={() => {
-          onChange('table');
-        }}
-      >
-        <TableIcon />
-      </ViewButton>
-      <ViewButton
         label="Grid"
         pressed={mode === 'grid'}
         onClick={() => {
@@ -37,6 +28,15 @@ export function CatalogViewSwitcher({ mode, onChange }: CatalogViewSwitcherProps
         }}
       >
         <GridIcon />
+      </ViewButton>
+      <ViewButton
+        label="Table"
+        pressed={mode === 'table'}
+        onClick={() => {
+          onChange('table');
+        }}
+      >
+        <TableIcon />
       </ViewButton>
     </HStack>
   );
@@ -62,7 +62,6 @@ function ViewButton({ label, pressed, onClick, children }: ViewButtonProps) {
       rounded="md"
       bg={pressed ? 'gray.900' : 'transparent'}
       color={pressed ? 'white' : 'gray.700'}
-      borderWidth={pressed ? '0' : '0'}
       _hover={{ bg: pressed ? 'gray.800' : 'white' }}
       _focusVisible={{ outline: '2px solid', outlineColor: 'blue.500', outlineOffset: '2px' }}
       aria-pressed={pressed}

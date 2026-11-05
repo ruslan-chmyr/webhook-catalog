@@ -8,6 +8,7 @@ import { login } from '@/features/auth/api/authApi';
 import { server } from '@/mocks/server';
 import { listWebhooks } from '@/mocks/webhooks';
 import { webhooksQueryKey } from '@/features/webhooks/model/queryKeys';
+import { CATALOG_VIEW_STORAGE_KEY } from '../list/hooks/useCatalogViewMode';
 import { WEBHOOK_SEARCH_DEBOUNCE_MS } from '../list/hooks/useWebhookListState';
 
 const credentials = {
@@ -53,6 +54,7 @@ function requestedSearch(search: string): string {
 }
 
 async function openWebhooks(path = '/'): Promise<void> {
+  localStorage.setItem(CATALOG_VIEW_STORAGE_KEY, 'table');
   await login(credentials);
   await act(async () => {
     await router.navigate(path);

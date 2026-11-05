@@ -28,7 +28,8 @@ describe('poster URLs', () => {
   });
 
   it('targets horizontal card poster widths in sizes', () => {
-    expect(POSTER_CARD_SIZES).toContain('112px');
+    expect(POSTER_CARD_SIZES).toBe('(min-width: 48em) 112px, 104px');
+    expect(POSTER_CARD_SIZES).not.toContain('136px');
     expect(POSTER_CARD_SIZES).not.toContain('45vw');
   });
 });

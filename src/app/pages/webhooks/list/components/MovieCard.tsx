@@ -76,7 +76,7 @@ export function MovieCard({ webhook, priority, onEdit }: MovieCardProps) {
             fontWeight="medium"
             color="blue.600"
             _focusVisible={{ outline: '2px solid', outlineColor: 'blue.500', outlineOffset: '2px' }}
-            aria-label={`IMDb page for ${webhook.name}`}
+            aria-label={`Search IMDb for ${webhook.name}`}
           >
             IMDb
             <ExternalLinkIcon />
